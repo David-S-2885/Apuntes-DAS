@@ -64,6 +64,7 @@
 \RequirePackage{multirow}
 \RequirePackage{enumitem}
 \RequirePackage{listings}
+\RequirePackage{amsmath}
 \RequirePackage{amssymb}
 \RequirePackage[most]{tcolorbox}
 \RequirePackage{hyperref}
@@ -82,45 +83,51 @@
 \definecolor{strgreen}{RGB}{22, 101, 52}     % Verde strings
 \definecolor{commentgray}{RGB}{100, 116, 139}% Gris comentarios
 
+% Definiciones predeterminadas de seguridad (Tema Blue por defecto)
+\definecolor{primary}{RGB}{20, 52, 98}       % Azul marino institucional (#143462)
+\definecolor{secondary}{RGB}{14, 116, 144}   % Azul verdoso / Cian (#0E7490)
+\definecolor{accent}{RGB}{217, 119, 6}       % Ámbar / Dorado (#D97706)
+
+% Paletas predefinidas de temas
+\newcommand{\apuntes@theme@blue}{%
+  \definecolor{primary}{RGB}{20, 52, 98}%       % Azul marino institucional (#143462)
+  \definecolor{secondary}{RGB}{14, 116, 144}%   % Azul verdoso / Cian (#0E7490)
+  \definecolor{accent}{RGB}{217, 119, 6}%       % Ámbar / Dorado (#D97706)
+}
+\newcommand{\apuntes@theme@emerald}{%
+  \definecolor{primary}{RGB}{19, 78, 74}%       % Verde pino profundo (#134E4A)
+  \definecolor{secondary}{RGB}{13, 148, 136}%   % Verde azulado teal (#0D9488)
+  \definecolor{accent}{RGB}{234, 88, 12}%       % Naranja fuego (#EA580C)
+}
+\newcommand{\apuntes@theme@purple}{%
+  \definecolor{primary}{RGB}{76, 29, 149}%      % Púrpura real oscuro (#4C1D95)
+  \definecolor{secondary}{RGB}{109, 40, 217}%   % Violeta vibrante (#6D28D9)
+  \definecolor{accent}{RGB}{217, 119, 6}%       % Ámbar dorado (#D97706)
+}
+\newcommand{\apuntes@theme@red}{%
+  \definecolor{primary}{RGB}{136, 19, 55}%      % Burdeos profundo (#881337)
+  \definecolor{secondary}{RGB}{190, 18, 60}%    % Rubí carmesí (#BE123C)
+  \definecolor{accent}{RGB}{202, 138, 4}%       % Oro viejo (#CA8A04)
+}
+\newcommand{\apuntes@theme@amber}{%
+  \definecolor{primary}{RGB}{120, 53, 15}%      % Ámbar tierra oscuro (#78350F)
+  \definecolor{secondary}{RGB}{180, 83, 9}%     % Cobre (#B45309)
+  \definecolor{accent}{RGB}{14, 116, 144}%      % Azul cian (#0E7490)
+}
+\newcommand{\apuntes@theme@slate}{%
+  \definecolor{primary}{RGB}{30, 41, 59}%       % Pizarra oscuro (#1E293B)
+  \definecolor{secondary}{RGB}{71, 85, 105}%    % Pizarra medio (#475569)
+  \definecolor{accent}{RGB}{2, 132, 199}%       % Azul cielo (#0284C7)
+}
+
 % Comando para aplicar temas de color predefinidos
 \newcommand{\settheme}[1]{%
-  \def\apuntes@selected{#1}%
-  % Tema Blue (Por defecto - Azul institucional / Marino / Cian)
-  \ifx\apuntes@selected\string blue
-    \definecolor{primary}{RGB}{20, 52, 98}       % Azul marino institucional (#143462)
-    \definecolor{secondary}{RGB}{14, 116, 144}   % Azul verdoso / Cian (#0E7490)
-    \definecolor{accent}{RGB}{217, 119, 6}       % Ámbar / Dorado (#D97706)
-  \fi
-  % Tema Emerald (Verde bosque / Teal / Naranja cálido)
-  \ifx\apuntes@selected\string emerald
-    \definecolor{primary}{RGB}{19, 78, 74}       % Verde pino profundo (#134E4A)
-    \definecolor{secondary}{RGB}{13, 148, 136}   % Verde azulado teal (#0D9488)
-    \definecolor{accent}{RGB}{234, 88, 12}       % Naranja fuego (#EA580C)
-  \fi
-  % Tema Purple (Púrpura real / Violeta / Dorado)
-  \ifx\apuntes@selected\string purple
-    \definecolor{primary}{RGB}{76, 29, 149}      % Púrpura real oscuro (#4C1D95)
-    \definecolor{secondary}{RGB}{109, 40, 217}   % Violeta vibrante (#6D28D9)
-    \definecolor{accent}{RGB}{217, 119, 6}       % Ámbar dorado (#D97706)
-  \fi
-  % Tema Red (Burdeos / Carmesí / Oro viejo)
-  \ifx\apuntes@selected\string red
-    \definecolor{primary}{RGB}{136, 19, 55}      % Burdeos profundo (#881337)
-    \definecolor{secondary}{RGB}{190, 18, 60}    % Rubí carmesí (#BE123C)
-    \definecolor{accent}{RGB}{202, 138, 4}       % Oro viejo (#CA8A04)
-  \fi
-  % Tema Amber (Tierra / Ámbar oscuro / Azul contraste)
-  \ifx\apuntes@selected\string amber
-    \definecolor{primary}{RGB}{120, 53, 15}      % Ámbar tierra oscuro (#78350F)
-    \definecolor{secondary}{RGB}{180, 83, 9}     % Cobre (#B45309)
-    \definecolor{accent}{RGB}{14, 116, 144}      % Azul cian (#0E7490)
-  \fi
-  % Tema Slate (Nord / Pizarra minimalista / Azul glaciar)
-  \ifx\apuntes@selected\string slate
-    \definecolor{primary}{RGB}{30, 41, 59}       % Pizarra oscuro (#1E293B)
-    \definecolor{secondary}{RGB}{71, 85, 105}    % Pizarra medio (#475569)
-    \definecolor{accent}{RGB}{2, 132, 199}       % Azul cielo (#0284C7)
-  \fi
+  \edef\apuntes@temptheme{#1}%
+  \@ifundefined{apuntes@theme@\apuntes@temptheme}{%
+    \apuntes@theme@blue
+  }{%
+    \csname apuntes@theme@\apuntes@temptheme\endcsname
+  }%
 }
 
 % Aplicar tema seleccionado por opción
@@ -308,7 +315,7 @@
   boxrule=0.8pt,
   leftrule=4.5pt,
   fonttitle=\bfseries\color{secondary},
-  title={$\varhexagon$ Patrón / Estilo Arquitectónico: #2},
+  title={$\lozenge$ Patrón / Estilo Arquitectónico: #2},
   attach title to upper=\par\vspace{0.4em},
   #1
 }
@@ -322,7 +329,7 @@
   boxrule=0.8pt,
   leftrule=4.5pt,
   fonttitle=\bfseries\color{alertred},
-  title={$\text{\sffamily X}$ Anti-Patrón de Diseño: #2},
+  title={{\bfseries\sffamily\color{alertred}[X]} Anti-Patrón de Diseño: #2},
   attach title to upper=\par\vspace{0.4em},
   #1
 }
