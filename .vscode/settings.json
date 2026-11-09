@@ -3,6 +3,20 @@
   "latex-workshop.latex.rootFile.doNotPrompt": true,
   "latex-workshop.latex.search.rootFiles.include": [
     "main.tex"
+  ],
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "pdflatex ➞ pdflatex",
+      "tools": [
+        "pdflatex",
+        "pdflatex"
+      ]
+    },
+    {
+      "name": "latexmk",
+      "tools": [
+        "latexmk"
+      ]
+    }
   ]
 }
-

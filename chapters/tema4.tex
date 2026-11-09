@@ -1,0 +1,553 @@
+% !TeX root = ../main.tex
+\chapter{Evaluación de Arquitecturas Software y Método ATAM}
+\label{cap:tema4}
+
+\begin{tcolorbox}[
+  enhanced,
+  colback=primary!5!bglight,
+  colframe=primary,
+  arc=3mm,
+  boxrule=1pt,
+  title={\bfseries\color{white} Objetivos de Aprendizaje del Tema 4},
+  coltitle=white
+]
+Al finalizar este capítulo, el estudiante e ingeniero de software será capaz de:
+\begin{itemize}[leftmargin=1.5em]
+  \item Comprender por qué los \textbf{Requisitos No Funcionales (RNF)} o \textbf{Atributos de Calidad (Quality Attributes - QAs)} son los que verdaderamente moldean y determinan la \textbf{forma final} de una arquitectura software.
+  \item Contrastar formalmente la cardinalidad y el alcance de los Requisitos Funcionales (RF) frente a los Atributos de Calidad (RNF).
+  \item Cuantificar y operacionalizar atributos de calidad vagos en \textbf{valores numéricos medibles} y verificables mediante pruebas empíricas.
+  \item Dominar la taxonomía de atributos de calidad en tiempo de ejecución (\emph{Runtime}), fuera de ejecución (\emph{Non-Runtime}) y de negocio, así como los estándares internacionales \textbf{ISO/IEC 25010:2011} y \textbf{ISO/IEC 25010:2023}.
+  \item Diseñar \textbf{Escenarios de Calidad} formales según el estándar del SEI, desglosando con precisión sus seis partes canónicas: \emph{Fuente, Estímulo, Entorno, Artefacto, Respuesta y Medida de la Respuesta}.
+  \item Construir y priorizar un \textbf{Árbol de Utilidad (\emph{Utility Tree})} utilizando la matriz bidireccional de prioridad $(Importancia, Dificultad) \in \{H, M, L\}^2$.
+  \item Comprender el panorama de métodos de evaluación de arquitectura (\emph{SAAM, ARID, CBAM}) y dominar el método de referencia de la industria: \textbf{ATAM (\emph{Architecture Tradeoff Analysis Method})}.
+  \item Identificar, clasificar y documentar los cuatro hallazgos cardinales de una evaluación arquitectónica: \textbf{Riesgos}, \textbf{No-Riesgos}, \textbf{Puntos de Sensibilidad (\emph{Sensitivity Points})} y \textbf{Compromisos (\emph{Trade-offs})}.
+  \item Ejecutar las dos fases y los nueve pasos secuenciales de ATAM, comprendiendo los roles del equipo evaluador y la interacción con los \emph{stakeholders}.
+\end{itemize}
+\end{tcolorbox}
+
+\vspace{1em}
+
+% ==============================================================================
+% SECCIÓN 1: INTRODUCCIÓN Y ATRIBUTOS DE CALIDAD
+% ==============================================================================
+\section{El Rol Crítico de los Atributos de Calidad en la Arquitectura}
+\label{sec:atributos-calidad-rol}
+
+\subsection{Los Requisitos No Funcionales Determinan la Forma del Software}
+
+Un error común en ingeniería de software novata consiste en diseñar un sistema basándose únicamente en sus casos de uso funcionales (e.g., ``el sistema debe permitir a un usuario autenticarse y realizar un pedido''). Si la arquitectura solo respondiera a requerimientos funcionales, cualquier estructura de código que ejecutara la lógica de negocio sería válida, incluyendo un monolito desordenado de $50.000$ líneas en un único archivo.
+
+\begin{principio}{Los RNF Determinan la Forma de la Arquitectura}
+Las arquitecturas software \textbf{no son sólo el resultado de responder a Requisitos Funcionales (RF)}; son los \textbf{Requisitos No Funcionales (RNF) o Atributos de Calidad (\emph{Quality Attributes - QAs})} los que dictan de forma determinante la \textbf{forma, topología y organización final} de la arquitectura.
+\end{principio}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{4.5cm} X X}
+\toprule
+\textbf{Dimensión de Comparación} & \textbf{Requisito Funcional (RF)} & \textbf{Requisito No Funcional / QA (RNF)} \\
+\midrule
+\textbf{¿Qué describe?} & Lo que el sistema \textbf{hace} (capacidades, casos de uso, transformaciones de datos). & Cómo de bien el sistema se comporta mientras lo hace (atributos de calidad). \\
+\addlinespace
+\textbf{Cardinalidad de Uso} & Se utiliza \textbf{una sola vez} en el proceso de diseño. & Puede ser usado \textbf{múltiples veces} a lo largo del proceso de diseño. \\
+\addlinespace
+\textbf{Alcance en la Arquitectura} & Afecta a una \textbf{parte concreta y localizada} (un método, clase o controlador específico). & Es transversal: \textbf{afecta a diversas partes y subsistemas} simultáneamente. \\
+\addlinespace
+\textbf{Facilidad de Verificación} & Binaria: la función calcula el resultado correcto o falla (pasa/falla un test unitario). & Compleja y cuantitativa: exige métricas de latencia, disponibilidad, carga y observabilidad. \\
+\bottomrule
+\end{tabularx}
+\caption{Diferencias estructurales entre Requisitos Funcionales y Atributos de Calidad.}
+\label{tab:rf-vs-rnf}
+\end{table}
+
+\subsection{La Dificultad Intrínseca de Evaluar Diseños}
+
+Evaluar un sistema ya en ejecución (\emph{benchmarking}, pruebas de estrés) es un problema técnico habitual. Sin embargo, \textbf{evaluar una arquitectura software antes de su construcción} entraña una dificultad extrema:
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Evaluamos un diseño abstracto sobre papel o modelo, no un programa compilado:} No podemos ejecutar un \emph{profiler} de CPU sobre un diagrama UML de paquetes.
+  \item \textbf{Existen múltiples soluciones candidatas en competencia:} ¿Conviene una base de datos relacional particionada o un clúster NoSQL orientado a documentos? ¿Conviene comunicación síncrona gRPC o un bus asíncrono RabbitMQ?
+  \item \textbf{Imposibilidad de maximizar todos los atributos a la vez:} El cliente desearía un sistema infinitamente escalable, con latencia cero, seguridad militar impenetrable y coste económico nulo. La realidad física y matemática obliga a gestionar compromisos (\emph{trade-offs}).
+\end{itemize}
+
+\subsection{Operacionalización Cuantitativa: De Deseos Vagos a Métricas Medibles}
+
+Para que un atributo de calidad pueda evaluarse en una arquitectura, es estrictamente obligatorio transformarlo en un \textbf{valor numérico medible o en un rango cuantitativo estricto}. Si un requerimiento no es cuantificable, no puede evaluarse ni auditarse formalmente.
+
+\begin{antipatron}{Especificación Vaga de Calidad}
+Formulaciones ambiguas como:
+\begin{itemize}
+  \item \textcolor{alertred}{\textbf{Inaceptable:}} \texttt{<<Se desea que la encriptación de datos sea altamente segura>>}.
+  \item \textcolor{alertred}{\textbf{Inaceptable:}} \texttt{<<El sistema debe ser muy rápido y escalable>>}.
+\end{itemize}
+Estas afirmaciones son subjetivas y no permiten al arquitecto elegir entre algoritmos ni verificar el cumplimiento del diseño.
+\end{antipatron}
+
+\begin{ejemplo}{Operacionalización Cuantitativa Rigurosa}
+\begin{itemize}
+  \item \textcolor{alertgreen}{\textbf{Formulación Correcta (Cifrado y Rendimiento):}} \emph{<<Al cifrar un volumen de $1\text{ GB}$ de datos mediante el algoritmo AES con clave de $256\text{ bits}$ en modo GCM sobre un hilo de CPU estándar, el tiempo de procesamiento no debe superar los $6\text{ segundos}$, manteniendo una tasa de uso de CPU inferior al $35\%$}>>.
+  \item \textcolor{alertgreen}{\textbf{Formulación Correcta (Latencia de Consulta):}} \emph{<<Bajo una carga concurrente de $1.000\text{ peticiones por segundo}$, el percentil 99 ($p99$) del tiempo de respuesta del servicio de autenticación debe ser inferior a $30\text{ ms}$}>>.
+\end{itemize}
+\end{ejemplo}
+
+% ==============================================================================
+% SECCIÓN 2: TAXONOMÍAS Y ESTÁNDARES ISO 25010
+% ==============================================================================
+\section{Taxonomías de Atributos de Calidad y Estándar ISO/IEC 25010}
+\label{sec:taxonomias-iso25010}
+
+\subsection{Clasificación de Atributos: Runtime, Non-Runtime y Negocio}
+
+Los atributos de calidad se estructuran habitualmente en tres grandes categorías operacionales:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  catBox/.style={rectangle, draw=primary, fill=bglight, thick, rounded corners=2mm, minimum width=3.6cm, minimum height=3cm, align=center},
+  titleNode/.style={rectangle, draw=secondary, fill=secondary!20, thick, rounded corners=1mm, minimum width=3.2cm, inner sep=4pt, align=center}
+]
+  % Runtime
+  \node[catBox, fill=primary!10] (run) at (-4.2, 0) {};
+  \node[titleNode] at (-4.2, 1.2) {\textbf{En Ejecución (\emph{Runtime})}};
+  \node at (-4.2, -0.3) [text width=3.4cm, align=center] {
+    \footnotesize Rendimiento (\emph{Performance})\\
+    \footnotesize Seguridad (\emph{Security})\\
+    \footnotesize Disponibilidad (\emph{Availability})\\
+    \footnotesize Interoperabilidad\\
+    \footnotesize Fiabilidad (\emph{Reliability})
+  };
+
+  % Non-Runtime
+  \node[catBox, fill=secondary!10] (nonrun) at (0, 0) {};
+  \node[titleNode] at (0, 1.2) {\textbf{Fuera de Ejecución}};
+  \node at (0, -0.3) [text width=3.4cm, align=center] {
+    \footnotesize Modificabilidad (\emph{Modifiability})\\
+    \footnotesize Mantenibilidad\\
+    \footnotesize Testeabilidad (\emph{Testability})\\
+    \footnotesize Reusabilidad\\
+    \footnotesize Portabilidad
+  };
+
+  % Business
+  \node[catBox, fill=accent!15] (bus) at (4.2, 0) {};
+  \node[titleNode] at (4.2, 1.2) {\textbf{Objetivos de Negocio}};
+  \node at (4.2, -0.3) [text width=3.4cm, align=center] {
+    \footnotesize Coste de Infraestructura\\
+    \footnotesize Tiempo al Mercado (\emph{Time-to-Market})\\
+    \footnotesize Vida útil del producto\\
+    \footnotesize Cumplimiento legal (GDPR)
+  };
+\end{tikzpicture}
+\caption{Taxonomía operacional de los Atributos de Calidad en arquitectura software.}
+\label{fig:taxonomia-qas}
+\end{figure}
+
+Los atributos se descomponen jerárquicamente en **sub-atributos** de granularidad más fina para facilitar su medición directa:
+$$\text{\textbf{Mantenibilidad}} \longrightarrow \begin{cases} \text{Complejidad ciclomática (sub-QA nivel 1)} \\ \text{Modularidad y acoplamiento (sub-QA nivel 1)} \\ \text{Analizabilidad y facilidad de prueba (sub-QA nivel 1)} \end{cases}$$
+
+\subsection{El Modelo de Calidad ISO/IEC 25010:2011 frente a ISO/IEC 25010:2023}
+
+El estándar internacional **ISO/IEC 25010** (parte de la familia SQuaRE -- \emph{Software Product Quality Requirements and Evaluation}) representa la referencia formal de la industria para evaluar la calidad del software:
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l p{5cm} X}
+\toprule
+\textbf{Característica ISO 25010} & \textbf{Sub-características Clave} & \textbf{Definición de Ingeniería} \\
+\midrule
+\textbf{Adecuación Funcional} & Completitud, corrección y pertinencia. & Capacidad del software de proveer funciones que satisfacen las necesidades declaradas. \\
+\addlinespace
+\textbf{Eficiencia de Desempeño} & Comportamiento temporal, uso de recursos, capacidad. & Relación entre el nivel de rendimiento y la cantidad de recursos de cómputo utilizados. \\
+\addlinespace
+\textbf{Compatibilidad} & Coexistencia e interoperabilidad. & Capacidad de intercambiar información con otros sistemas compartiendo el mismo entorno. \\
+\addlinespace
+\textbf{Usabilidad / Capacidad Interac.} & Aprendizaje, operabilidad, protección de errores, estética. & Facilidad con la que los usuarios pueden utilizar el sistema para lograr sus metas con eficacia. \\
+\addlinespace
+\textbf{Fiabilidad (\emph{Reliability})} & Madurez, disponibilidad, tolerancia a fallos, recuperación. & Capacidad de mantener un nivel de rendimiento especificado en un periodo de tiempo. \\
+\addlinespace
+\textbf{Seguridad (\emph{Security})} & Confidencialidad, integridad, no repudio, autenticidad. & Protección de información y datos para impedir accesos o modificaciones no autorizadas. \\
+\addlinespace
+\textbf{Mantenibilidad} & Modularidad, reusabilidad, analizabilidad, modificabilidad, testeabilidad. & Facilidad con la que el software puede ser modificado para corregir fallos o añadir mejoras. \\
+\addlinespace
+\textbf{Flexibilidad / Portabilidad} & Adaptabilidad, facilidad de instalación, reemplazabilidad. & Facilidad para trasladar el software de un entorno hardware o nube a otro. \\
+\bottomrule
+\end{tabularx}
+\caption{Características de calidad del producto software según el modelo ISO/IEC 25010.}
+\label{tab:iso25010}
+\end{table}
+
+\begin{importante}{Novedades Fundamentales de la Edición ISO/IEC 25010:2023}
+En la revisión publicada en 2023, la norma incorporó ajustes esenciales para los sistemas modernos:
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Inclusión formal de \emph{Safety} (Seguridad Funcional y Operativa):} Capacidad del sistema para operar en un estado que previene daños o amenazas a la vida humana, la salud de las personas, las propiedades materiales o el medio ambiente (vital en automoción, robótica y electromedicina).
+  \item \textbf{Evolución terminológica:} Se refina \emph{Usability} hacia \textbf{\emph{Interaction Capability}} (abarcando interfaces por voz, multimodales e IA) y \emph{Portability} hacia \textbf{\emph{Flexibility}}.
+\end{enumerate}
+\end{importante}
+
+% ==============================================================================
+% SECCIÓN 3: ESCENARIOS DE CALIDAD
+% ==============================================================================
+\section{Escenarios de Calidad: Cuantificación Medible de Atributos}
+\label{sec:escenarios-calidad}
+
+Los atributos de calidad son conceptos abstractos. Para poder utilizarlos en una evaluación técnica, deben instanciarse en **Escenarios de Calidad**.
+
+\begin{definicion}{Escenario de Calidad}
+Un **Escenario de Calidad** es una descripción breve y formal de una situación concreta en la que un estímulo externo o interno interactúa con el sistema, especificando las condiciones del entorno y una medida objetiva y verificable de la respuesta esperada.
+\end{definicion}
+
+Existen dos tipos de escenarios según su grado de abstracción:
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Escenarios Generales:} Independientes del dominio del sistema (e.g., ``ante un fallo en un nodo de base de datos, el sistema se recupera sin pérdida de transacciones'').
+  \item \textbf{Escenarios Concretos:} Especificados con parámetros numéricos exactos para un sistema particular (e.g., ``si falla el nodo primario de MongoDB en el cluster de pedidos durante la campaña de Navidad, el replica set debe promover un secundario en menos de 4 segundos'').
+\end{itemize}
+
+\subsection{Las 6 Partes Canónicas de un Escenario (Estándar SEI)}
+
+El \emph{Software Engineering Institute} (SEI) de la Universidad Carnegie Mellon estandarizó las seis partes que componen inequívocamente todo escenario de calidad profesional:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  partBox/.style={rectangle, draw=primary, fill=primary!15, thick, rounded corners=2mm, minimum width=2.6cm, minimum height=1.1cm, align=center},
+  centerBox/.style={rectangle, draw=secondary, fill=secondary!20, thick, rounded corners=3mm, minimum width=3.2cm, minimum height=1.3cm, align=center},
+  arrow/.style={-{Stealth[scale=1.1]}, line width=1.3pt, color=secondary}
+]
+  \node[partBox] (source) at (-4.5, 2) {\textbf{1. Fuente}\\[2pt]\scriptsize Cliente / Atacante};
+  \node[partBox] (stimulus) at (-4.5, -0.5) {\textbf{2. Estímulo}\\[2pt]\scriptsize Petición / Fallo};
+  
+  \node[centerBox] (art) at (0, 0.75) {\textbf{3. Artefacto Afectado}\\ \scriptsize Componente de pago / DB\\[3pt] \textbf{4. Entorno}\\ \scriptsize Operación normal / Sobrecarga};
+
+  \node[partBox, fill=alertgreen!20, draw=alertgreen] (response) at (4.5, 2) {\textbf{5. Respuesta}\\[2pt]\scriptsize Transacción completada};
+  \node[partBox, fill=alertgreen!20, draw=alertgreen] (measure) at (4.5, -0.5) {\textbf{6. Medida}\\[2pt]\scriptsize Latencia $< 3\text{ s}$};
+
+  \draw[arrow] (source) -- (art);
+  \draw[arrow] (stimulus) -- (art);
+  \draw[arrow] (art) -- (response);
+  \draw[arrow] (art) -- (measure);
+\end{tikzpicture}
+\caption{Las seis partes canónicas de un Escenario de Calidad según el SEI.}
+\label{fig:escenario-partes}
+\end{figure}
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Fuente del Estímulo (\emph{Source of Stimulus}):} La entidad (humana o automatizada) que origina la acción (un usuario legítimo, un hacker malicioso, un sensor IoT, el planificador del sistema operativo).
+  \item \textbf{Estímulo (\emph{Stimulus}):} La condición o evento que arriba al sistema y que exige una respuesta (una transacción de compra, un fallo de conexión a red, una petición de cambio en el código fuente).
+  \item \textbf{Entorno (\emph{Environment}):} El estado operacional en el que se encuentra el sistema cuando arriba el estímulo (modo normal, pico de tráfico máximo, modo degradado, tiempo de desarrollo/diseño).
+  \item \textbf{Artefacto Afectado (\emph{Artifact}):} La parte de la arquitectura o subsistema que recibe el estímulo (el servicio de autenticación, el cluster de Kafka, el esquema relacional de la base de datos).
+  \item \textbf{Respuesta (\emph{Response}):} La acción o actividad que el sistema o los ingenieros ejecutan en consecuencia (procesar la compra, levantar un contenedor sustituto, aislar el fallo, realizar la refactorización sin efectos colaterales).
+  \item \textbf{Medida de la Respuesta (\emph{Response Measure}):} El criterio cuantitativo y objetivo con el que se juzga si la respuesta satisface el requisito (latencia media inferior a $2\text{ s}$, tiempo de recuperación menor a $5\text{ minutos}$, tiempo de modificación en menos de $4\text{ horas-persona}$).
+\end{enumerate}
+
+\subsection{Ejemplos de Escenarios Canónicos por Atributo}
+
+\begin{ejemplo}{Escenario de Rendimiento (\emph{Performance})}
+\emph{<<Cuando 100 usuarios inician concurrentemente la transición `completar pago' (Estímulo) desde el navegador web (Fuente), el componente de pagos (Artefacto), bajo condiciones operacionales normales (Entorno), procesará las solicitudes (Respuesta) con una latencia media inferior a 3 segundos (Medida de la respuesta)>>}.
+\end{ejemplo}
+
+\begin{ejemplo}{Escenario de Disponibilidad (\emph{Availability})}
+\emph{<<Un mensaje de red malformado e imprevisto (Estímulo) es transmitido por un sistema externo (Fuente) al proceso de ingesta de telemetría (Artefacto) en horario de producción continuo (Entorno). El sistema registra el error, informa al operador de guardia y continúa operando ininterrumpidamente (Respuesta) con cero segundos de tiempo de caída acumulado (Medida de la respuesta)>>}.
+\end{ejemplo}
+
+\begin{ejemplo}{Escenario de Modificabilidad (\emph{Modifiability})}
+\emph{<<El equipo de producto desea cambiar la pasarela de pagos actual de Redsys a Stripe (Estímulo). El desarrollador (Fuente) introduce las modificaciones en la capa de adaptadores de infraestructura (Artefacto) en tiempo de diseño (Entorno). La modificación se completa sin efectos colaterales en las reglas de negocio (Respuesta) con un esfuerzo de implementación y pruebas inferior a 8 horas-persona (Medida de la respuesta)>>}.
+\end{ejemplo}
+
+% ==============================================================================
+% SECCIÓN 4: EL ÁRBOL DE UTILIDAD (UTILITY TREE)
+% ==============================================================================
+\section{El Árbol de Utilidad (\emph{Utility Tree})}
+\label{sec:utility-tree}
+
+El **Árbol de Utilidad** es la herramienta estructural que traduce las metas de alto nivel del negocio y los requerimientos no funcionales abstractos en un catálogo priorizado de escenarios concretos.
+
+\subsection{Estructura Jerárquica del Utility Tree}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  root/.style={rectangle, draw=primary, fill=primary!20, thick, rounded corners=2mm, minimum width=2.4cm, minimum height=0.9cm, align=center},
+  qaNode/.style={rectangle, draw=secondary, fill=secondary!20, thick, rounded corners=1.5mm, minimum width=2.8cm, minimum height=0.8cm, align=center},
+  subNode/.style={rectangle, draw=accent, fill=accent!20, thick, rounded corners=1mm, minimum width=2.6cm, minimum height=0.7cm, align=center},
+  scNode/.style={rectangle, draw=alertgreen, fill=bglight, thick, rounded corners=1mm, minimum width=4cm, align=left, inner sep=4pt},
+  arrow/.style={-{Stealth[scale=1.0]}, thick, color=textdark!70}
+]
+  \node[root] (root) at (0, 3) {\textbf{Utilidad Global}};
+
+  \node[qaNode] (perf) at (-4, 1.8) {\textbf{Performance}};
+  \node[qaNode] (sec) at (4, 1.8) {\textbf{Security}};
+
+  \node[subNode] (lat) at (-5.5, 0.4) {\scriptsize Data Latency};
+  \node[subNode] (thru) at (-2.5, 0.4) {\scriptsize Throughput};
+  \node[subNode] (cif) at (4, 0.4) {\scriptsize Cifrado Datos};
+
+  \node[scNode] (sc1) at (-5.5, -1.2) {\scriptsize \textbf{SC-01 (H, M):} Latencia DB $< 200\text{ ms}$};
+  \node[scNode] (sc2) at (-2.5, -1.2) {\scriptsize \textbf{SC-02 (H, H):} $10.000\text{ tx/s}$ en login};
+  \node[scNode] (sc3) at (4, -1.2) {\scriptsize \textbf{SC-03 (M, L):} Cifrado AES-256 en reposo};
+
+  \draw[arrow] (root) -- (perf);
+  \draw[arrow] (root) -- (sec);
+  \draw[arrow] (perf) -- (lat);
+  \draw[arrow] (perf) -- (thru);
+  \draw[arrow] (sec) -- (cif);
+  \draw[arrow] (lat) -- (sc1);
+  \draw[arrow] (thru) -- (sc2);
+  \draw[arrow] (cif) -- (sc3);
+\end{tikzpicture}
+\caption{Desglose jerárquico de un Árbol de Utilidad (Utility Tree).}
+\label{fig:utility-tree}
+\end{figure}
+
+\subsection{Matriz de Priorización de Escenarios $(Importancia, Dificultad)$}
+
+En un sistema real pueden definirse fácilmente entre 30 y 80 escenarios. Dado que los recursos y el tiempo del equipo son finitos, es imposible analizar todos los escenarios con el mismo rigor. El Utility Tree introduce una **priorización bidimensional** asignando un par de letras $(H, M, L) \in \{\text{High}, \text{Medium}, \text{Low}\}$:
+
+\begin{equation}
+\mathbf{Prioridad} = (\text{\textbf{Importancia para el Negocio}}, \text{\textbf{Dificultad Técnica de Implementación}})
+\end{equation}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l c p{8cm}}
+\toprule
+\textbf{Categoría} & \textbf{Vector} & \textbf{Acción del Equipo de Evaluación (ATAM)} \\
+\midrule
+\textbf{Críticos} & \textcolor{alertred}{\textbf{(H, H)}} & \textbf{Máxima prioridad absoluta.} Escenarios cruciales para el negocio y de altísima complejidad técnica. Se analizan primero y en profundidad. \\
+\addlinespace
+\textbf{Importantes} & \textcolor{accent}{\textbf{(H, M)}} & \textbf{Alta prioridad.} Esenciales para el negocio y con dificultad media. \\
+\addlinespace
+\textbf{Riesgo Técnico} & \textcolor{secondary}{\textbf{(M, H)}} & Interés moderado para el negocio pero técnicamente desafiantes. Requieren vigilancia. \\
+\addlinespace
+\textbf{Secundarios} & \textbf{(M, M), (L, H)} & Se evalúan si sobra tiempo en el taller o mediante pruebas automatizadas secundarias. \\
+\addlinespace
+\textbf{Baja Prioridad} & \textbf{(L, L), (M, L)} & No justifican un análisis profundo durante la evaluación arquitectónica. \\
+\bottomrule
+\end{tabularx}
+\caption{Matriz de priorización de escenarios en el Utility Tree.}
+\label{tab:matriz-prioridades}
+\end{table}
+
+% ==============================================================================
+% SECCIÓN 5: EL MÉTODO ATAM
+% ==============================================================================
+\section{El Método ATAM (\emph{Architecture Tradeoff Analysis Method})}
+\label{sec:metodo-atam}
+
+Creado por Rick Kazman, Mark Klein y Paul Clements en el Software Engineering Institute (SEI) de la Universidad Carnegie Mellon, el método **ATAM** es el estándar de referencia mundial para evaluar arquitecturas de software en sectores de alta exigencia (automoción, aeroespacial, financiero, defensa y telecomunicaciones).
+
+\subsection{Los Cuatro Hallazgos Cardinales de ATAM}
+
+El objetivo fundamental de ATAM no es emitir una calificación numérica del software, sino descubrir y documentar formalmente cuatro tipos de hallazgos en el diseño:
+
+\begin{definicion}{Hallazgos Cardinales de ATAM}
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Riesgo (\emph{Risk}):} Una decisión arquitectónica que no ha sido suficientemente analizada o justificada y que puede comprometer gravemente la consecución de un atributo de calidad requerido.
+  \item \textbf{No-Riesgo (\emph{Non-Risk}):} Una decisión arquitectónica sólida y bien fundamentada que garantiza que el atributo de calidad asociado se cumplirá holgadamente.
+  \item \textbf{Punto de Sensibilidad (\emph{Sensitivity Point}):} Un componente, propiedad o parámetro de la arquitectura en el cual un cambio minúsculo produce una alteración desproporcionada en un atributo de calidad.
+  \item \textbf{Compromiso (\emph{Trade-off}):} Una decisión de diseño que actúa simultáneamente sobre dos o más atributos de calidad contrapuestos, mejorando uno a costa de degradar otro.
+\end{enumerate}
+\end{definicion}
+
+\begin{ejemplo}{Ejemplos Reales de Hallazgos en ATAM}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Riesgo:} \emph{<<Las reglas para escribir módulos de lógica de negocio en la capa 2 del estilo de 3 capas no están articuladas formalmente. Esto podría provocar duplicación de código comprometiendo la modificabilidad de la capa 3>>}.
+  \item \textbf{No-Riesgo:} \emph{<<Asumiendo una tasa de llegada de 1 mensaje por segundo y un tiempo de cómputo inferior a $30\text{ ms}$, la existencia de un hilo prioritario garantiza que el plazo límite de 1 segundo se cumplirá con certeza matemática>>}.
+  \item \textbf{Punto de Sensibilidad:} \emph{<<El rendimiento de todo el sistema de pedidos es altamente sensible a la fiabilidad del Message Broker: a partir de $1.000\text{ mensajes/s}$, cualquier retardo en el cluster Kafka colapsa los servicios subordinados>>}.
+  \item \textbf{Compromiso (\emph{Trade-off}):} \emph{<<Si incrementamos la longitud de clave a AES-256 para maximizar la Seguridad en la codificación de vídeo en streaming, se reduce drásticamente el Rendimiento del microcontrolador o bien se dispara el Coste del hardware requerido>>}.
+\end{itemize}
+\end{ejemplo}
+
+\subsection{Roles y Actores en el Proceso ATAM}
+
+Un taller de evaluación ATAM requiere la participación coordinada de tres grupos:
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l p{4.5cm} X}
+\toprule
+\textbf{Rol en ATAM} & \textbf{Composición / Perfil} & \textbf{Responsabilidad Principal} \\
+\midrule
+\textbf{Clientes y Stakeholders} & Directores de negocio, usuarios finales, responsables de producto, operadores. & Presentar las metas comerciales, restricciones del mercado y definir la importancia de los escenarios. \\
+\addlinespace
+\textbf{Arquitectos de Software} & Diseñadores técnicos del sistema, arquitectos de software, líderes técnicos. & Presentar la arquitectura propuesta, justificar las decisiones de diseño y responder a los escenarios planteados. \\
+\addlinespace
+\textbf{Equipo Evaluador ATAM} & Especialistas externos e independientes: \emph{Moderador, Redactor de escenarios, Controlador de tiempo, Monitor del proceso, Entrevistador}. & Facilitar las dinámicas, cuestionar asunciones implícitas, construir el Utility Tree y redactar el informe técnico final. \\
+\bottomrule
+\end{tabularx}
+\caption{Roles y responsabilidades de los participantes en una evaluación ATAM.}
+\label{tab:roles-atam}
+\end{table}
+
+\subsection{Las Fases y los 9 Pasos Secuenciales de ATAM}
+
+El método ATAM se estructura en dos fases operacionales que abarcan nueve pasos formales:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  stepBox/.style={rectangle, draw=primary, fill=bglight, thick, rounded corners=2mm, minimum width=10.5cm, minimum height=0.65cm, align=left, inner sep=4pt},
+  arrow/.style={-{Stealth[scale=1.0]}, thick, color=secondary}
+]
+  % Fase I
+  \node[stepBox, fill=primary!15] (s1) at (0, 4.5) {\textbf{Paso 1:} Presentación del Método ATAM (explicar fases y roles a los asistentes)};
+  \node[stepBox, fill=primary!15] (s2) at (0, 3.7) {\textbf{Paso 2:} Presentación de los Objetivos de Negocio (contexto, metas y drivers clave)};
+  \node[stepBox, fill=primary!15] (s3) at (0, 2.9) {\textbf{Paso 3:} Presentación de la Arquitectura (estilos, capas, diagramas C\&C)};
+  \node[stepBox, fill=secondary!15] (s4) at (0, 2.1) {\textbf{Paso 4:} Identificación de Aproximaciones Arquitectónicas (estilos y patrones usados)};
+  \node[stepBox, fill=secondary!15] (s5) at (0, 1.3) {\textbf{Paso 5:} Construcción del Utility Tree (desglose jerárquico y priorización H/M/L)};
+  \node[stepBox, fill=secondary!15] (s6) at (0, 0.5) {\textbf{Paso 6:} Análisis de Aproximaciones Arquitectónicas (extracción de riesgos y trade-offs)};
+
+  % Fase II
+  \node[stepBox, fill=accent!20] (s7) at (0, -0.6) {\textbf{Paso 7:} Brainstorming y Priorización de Escenarios (votación con stakeholders)};
+  \node[stepBox, fill=accent!20] (s8) at (0, -1.4) {\textbf{Paso 8:} Volver a Analizar Aproximaciones Arquitectónicas (validar contra escenarios votados)};
+  \node[stepBox, fill=alertgreen!20] (s9) at (0, -2.2) {\textbf{Paso 9:} Presentación de Resultados y Reporte Final (riesgos, trade-offs, recomendaciones)};
+
+  \draw[arrow] (s1) -- (s2);
+  \draw[arrow] (s2) -- (s3);
+  \draw[arrow] (s3) -- (s4);
+  \draw[arrow] (s4) -- (s5);
+  \draw[arrow] (s5) -- (s6);
+  \draw[arrow] (s6) -- (s7);
+  \draw[arrow] (s7) -- (s8);
+  \draw[arrow] (s8) -- (s9);
+
+  \node[left] at (-5.4, 2.5) {\rotatebox{90}{\textbf{\textcolor{primary}{FASE I: Análisis Técnico}}}};
+  \node[left] at (-5.4, -1.4) {\rotatebox{90}{\textbf{\textcolor{accent}{FASE II: Stakeholders}}}};
+\end{tikzpicture}
+\caption{Secuencia de los nueve pasos formales de una evaluación ATAM.}
+\label{fig:atam-pasos}
+\end{figure}
+
+\begin{definicion}{Desglose Operacional de los 9 Pasos de ATAM}
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Paso 1: Presentación de ATAM:} El equipo evaluador explica la metodología, los objetivos, la agenda (típicamente 2 a 3 días de duración) y las reglas de discusión a los clientes y técnicos.
+  \item \textbf{Paso 2: Presentación de Objetivos de Negocio:} El cliente o gestor describe la misión comercial, el contexto del problema, las restricciones funcionales y los deseos de calidad primordiales.
+  \item \textbf{Paso 3: Presentación de la Arquitectura:} El arquitecto expone la solución técnica visualmente mediante vistas arquitectónicas, detallando restricciones hardware, middleware y estilos elegidos.
+  \item \textbf{Paso 4: Identificar Aproximaciones Arquitectónicas:} Se identifican los patrones y estilos adoptados (e.g., capas, colas de mensajes). Se exige analizar \textbf{al menos dos aproximaciones candidatas} para cada deseo de calidad clave.
+  \item \textbf{Paso 5: Construir el Utility Tree:} Se descomponen los atributos en sub-atributos y escenarios concretos cuantificables, clasificándolos en la matriz de prioridades $(H, M, L)^2$.
+  \item \textbf{Paso 6: Analizar Aproximaciones Arquitectónicas:} Se somete la arquitectura al estímulo de cada escenario prioritario, registrando formalmente los \textbf{Riesgos}, \textbf{No-Riesgos}, \textbf{Puntos Sensibles} y \textbf{Trade-offs}.
+  \item \textbf{Paso 7: Brainstorming y Priorización de Escenarios:} Se reúne al grupo ampliado de stakeholders. Se generan nuevos escenarios de uso y mediante un sistema de votación ponderada se eligen los escenarios más representativos.
+  \item \textbf{Paso 8: Volver a Analizar Aproximaciones:} Se contrastan los escenarios más votados en el Paso 7 contra la arquitectura para corroborar si descubren riesgos no detectados en la Fase I.
+  \item \textbf{Paso 9: Presentación de Resultados:} El equipo evaluador entrega el informe ejecutivo documentando todos los hallazgos, el árbol de utilidad final y la propuesta de cambios arquitectónicos necesarios.
+\end{enumerate}
+\end{definicion}
+
+% ==============================================================================
+% SECCIÓN 6: OTROS MÉTODOS DE EVALUACIÓN
+% ==============================================================================
+\section{Otros Métodos de Evaluación Arquitectónica}
+\label{sec:otros-metodos}
+
+Aunque ATAM es el método más extendido, existen otros marcos metodológicos diseñados para contextos específicos:
+
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{SAAM (\emph{Software Architecture Analysis Method}):} Fue el antecesor directo de ATAM desarrollado por Kazman et al. en 1994. Se enfocaba casi con exclusividad en la evaluación de la **Modificabilidad** y el coste de cambio.
+  \item \textbf{ARID (\emph{Active Reviews for Intermediate Designs}):} Diseñado para evaluar diseños parciales o subsistemas intermedios antes de completar la arquitectura global, combinando técnicas de revisión activa con escenarios de calidad.
+  \item \textbf{CBAM (\emph{Cost Benefit Analysis Method}):} Desarrollado por el SEI como extensión económica de ATAM. Modela matemáticamente el **Retorno de la Inversión (ROI)** de cada estrategia arquitectónica, ayudando a los directivos a decidir qué tácticas de calidad implementar en función de su coste en euros y su beneficio comercial derivado.
+  \item \textbf{SARA (\emph{Software Architecture Review and Assessment}):} Marco neutral que estandariza las directrices para la revisión de arquitecturas en consorcios industriales.
+\end{itemize}
+
+% ==============================================================================
+% SECCIÓN 7: EJERCICIOS RESUELTOS Y CASOS PRÁCTICOS DE EXAMEN
+% ==============================================================================
+\section{Ejercicios Resueltos y Casos Prácticos de Examen}
+\label{sec:ejercicios-tema4}
+
+\begin{ejercicioresuelto}{Construcción Completa de un Utility Tree para E-Commerce de Alta Demanda}
+\textbf{Enunciado:}\\
+Una plataforma de comercio electrónico debe rediseñarse para soportar la campaña de rebajas del Black Friday. Los directores de negocio exigen:
+\begin{enumerate}
+  \item Soportar picos masivos de navegación sin que la web se caiga.
+  \item Garantizar que las transacciones de cobro no superen nunca los $2\text{ segundos}$.
+  \item Proteger los números de tarjeta de crédito según la normativa PCI-DSS.
+  \item Permitir cambiar de proveedor de envíos en menos de dos días de trabajo.
+\end{enumerate}
+Construya el Árbol de Utilidad (\emph{Utility Tree}) formal, desglosando atributos, sub-atributos, identificadores de escenario, partes afectadas del sistema y la matriz de prioridad $(Importancia, Dificultad)$.
+
+\vspace{0.5em}
+\textbf{Solución Razonada:}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l p{2.8cm} p{2.8cm} c X}
+\toprule
+\textbf{Atributo} & \textbf{Sub-atributo} & \textbf{Parte Afectada} & \textbf{Prioridad} & \textbf{Escenario Concreto} \\
+\midrule
+\textbf{Disponibilidad} & Tolerancia a fallos & Cluster Web / API & \textbf{(H, H)} & \textbf{SC-01:} Si un nodo del API Gateway cae bajo carga de $50.000\text{ req/s}$, el balanceador redirige el tráfico al resto de nodos en $<1\text{ s}$ sin errores 500. \\
+\addlinespace
+\textbf{Rendimiento} & Latencia de transacción & Servicio de Pagos & \textbf{(H, M)} & \textbf{SC-02:} Cuando $5.000$ usuarios completan el pago simultáneamente, el $95\%$ de las transacciones finalizan en $<2\text{ s}$. \\
+\addlinespace
+\textbf{Seguridad} & Confidencialidad & Base de Datos & \textbf{(H, M)} & \textbf{SC-03:} Los datos de tarjetas se cifran en reposo con AES-256 (claves rotadas por KMS); un volcado no autorizado del disco no revela información legible. \\
+\addlinespace
+\textbf{Modificabilidad} & Acoplamiento & Módulo Logística & \textbf{(M, L)} & \textbf{SC-04:} Reemplazar el adaptador de SEUR por DHL en tiempo de diseño exige modificar únicamente una clase adaptadora en $<16\text{ horas-persona}$. \\
+\bottomrule
+\end{tabularx}
+\caption{Árbol de Utilidad formal con escenarios y prioridades del caso e-commerce.}
+\end{table}
+\end{ejercicioresuelto}
+
+\begin{ejercicioresuelto}{Análisis ATAM: Identificación de Riesgos, Puntos Sensibles y Trade-offs}
+\textbf{Enunciado:}\\
+El equipo de arquitectura del e-commerce presenta la siguiente propuesta técnica:
+\begin{quote}
+\emph{<<Para garantizar que los pagos respondan en menos de 2 segundos, se configurará una caché distribuida en memoria (Redis) que almacenará el estado de las transacciones en vuelo sin persistir inmediatamente en el disco de la base de datos relacional PostgreSQL. Para máxima seguridad, cada transacción se firmará con una clave asimétrica RSA de 4096 bits>>}.
+\end{quote}
+Como evaluador técnico ATAM, identifique de forma justificada los riesgos, puntos sensibles y trade-offs de esta propuesta.
+
+\vspace{0.5em}
+\textbf{Solución Razonada:}
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Riesgo (\emph{Risk}):}\\
+  Almacenar transacciones en vuelo únicamente en la caché en memoria de Redis sin escritura síncrona en PostgreSQL supone un **riesgo crítico de disponibilidad e integridad**: ante un fallo eléctrico repentino o reinicio del contenedor Redis, se perderán compras de clientes ya cobradas en el banco, violando la consistencia transaccional.
+  \item \textbf{Punto de Sensibilidad (\emph{Sensitivity Point}):}\\
+  El tiempo de cálculo de la firma digital RSA de 4096 bits es un **punto de sensibilidad clave para el rendimiento global**: si el volumen de peticiones supera los 500 pagos/s, la sobrecarga criptográfica de CPU colapsará el servicio, degradando la latencia mucho más allá de los 2 segundos requeridos.
+  \item \textbf{Compromiso (\emph{Trade-off}):}\\
+  \textbf{Seguridad vs.\ Rendimiento vs.\ Coste:} Aumentar el tamaño de clave RSA a 4096 bits maximiza la seguridad frente a ataques criptográficos (\emph{Security}), pero degrada de manera severa el tiempo de respuesta (\emph{Performance}) o bien obliga a comprar hardware de aceleración criptográfica HSM con altísimo coste financiero (\emph{Cost}).
+\end{enumerate}
+\end{ejercicioresuelto}
+
+% ==============================================================================
+% SECCIÓN 8: RESUMEN EJECUTIVO Y PREGUNTAS DE AUTOEVALUACIÓN
+% ==============================================================================
+\section{Resumen Ejecutivo y Preguntas de Autoevaluación}
+\label{sec:resumen-tema4}
+
+\begin{tcolorbox}[
+  enhanced,
+  colback=secondary!5!bglight,
+  colframe=secondary,
+  arc=3mm,
+  boxrule=1pt,
+  title={\bfseries\color{white} Resumen de Conceptos Clave del Tema 4},
+  coltitle=white
+]
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Atributos de Calidad (QAs):} Son los requisitos no funcionales que moldean la forma estructural de la arquitectura. Deben expresarse siempre mediante valores cuantitativos verificables.
+  \item \textbf{ISO/IEC 25010:} Estándar internacional que categoriza la calidad del software. La edición 2023 incorpora formalmente la dimensión de \emph{Safety} (seguridad de vidas y entorno).
+  \item \textbf{Escenarios de Calidad (SEI):} Estructurados obligatoriamente en 6 partes: \emph{Fuente, Estímulo, Entorno, Artefacto, Respuesta y Medida de la Respuesta}.
+  \item \textbf{Utility Tree:} Descompone las metas de negocio en escenarios concretos y los prioriza mediante la matriz $(Importancia, Dificultad) \in \{H, M, L\}^2$, centrando el análisis en los cuadrantes $(H, H)$ y $(H, M)$.
+  \item \textbf{Método ATAM:} Método de evaluación por excelencia. Sus cuatro hallazgos cardinales son: \textbf{Riesgos}, \textbf{No-Riesgos}, \textbf{Puntos de Sensibilidad} y \textbf{Compromisos (\emph{Trade-offs})}.
+  \item \textbf{Fases de ATAM:} Fase I (pasos 1-6 con equipo técnico reducido) y Fase II (pasos 7-9 con grupo ampliado de stakeholders para votación y generación de reporte final).
+\end{itemize}
+\end{tcolorbox}
+
+\subsection{Batería de Preguntas de Autoevaluación}
+
+\begin{enumerate}[leftmargin=1.8em]
+  \item \textbf{¿Por qué un Requisito No Funcional puede aplicarse múltiples veces en el diseño mientras que un Requisito Funcional solo se utiliza una vez?} \\
+  \emph{Respuesta orientativa:} Un requisito funcional describe una operación específica que se confina en un caso de uso y en una clase determinada. En cambio, un atributo de calidad como la seguridad o la latencia afecta transversalmente a la autenticación, a la base de datos, a las comunicaciones y a los logs, debiendo considerarse en cada decisión estructural.
+
+  \item \textbf{¿Cuáles son las seis partes canónicas de un Escenario de Calidad según el SEI?} \\
+  \emph{Respuesta orientativa:} 1. Fuente del estímulo; 2. Estímulo; 3. Entorno; 4. Artefacto afectado; 5. Respuesta; 6. Medida cuantitativa de la respuesta.
+
+  \item \textbf{¿Cuál es la diferencia técnica entre un Punto de Sensibilidad y un Trade-off en ATAM?} \\
+  \emph{Respuesta orientativa:} Un punto de sensibilidad es un parámetro o componente en el que un pequeño cambio produce una alteración drástica en **un único** atributo de calidad. Un trade-off es una decisión arquitectónica que afecta simultáneamente a **dos o más atributos contrapuestos**, mejorando uno a expensas de empeorar otro.
+
+  \item \textbf{¿Por qué los escenarios clasificados como $(L, L)$ se descartan del análisis profundo en un taller ATAM?} \\
+  \emph{Respuesta orientativa:} Porque representan requisitos de bajo impacto comercial para los stakeholders y de muy baja dificultad técnica para los ingenieros. Dedicar tiempo de evaluación a estos escenarios desperdiciaría recursos que deben consagrarse a mitigar los riesgos $(H, H)$ que pueden hacer fracasar el proyecto.
+\end{enumerate}
+
