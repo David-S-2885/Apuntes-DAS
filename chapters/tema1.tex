@@ -1,0 +1,1136 @@
+\chapter{Concepto de Arquitectura Software y Principios de Diseño}
+\label{cap:tema1}
+
+\begin{tcolorbox}[
+  enhanced,
+  colback=primary!5!bglight,
+  colframe=primary,
+  arc=3mm,
+  boxrule=1pt,
+  title={\bfseries\color{white} Objetivos de Aprendizaje del Tema 1},
+  coltitle=white
+]
+Al finalizar este capítulo, el estudiante e ingeniero de software será capaz de:
+\begin{itemize}[leftmargin=1.5em]
+  \item Comprender qué constituye la \textbf{Arquitectura Software (AS)} y diferenciarla con precisión del diseño detallado y de la mera implementación.
+  \item Dominar y aplicar la definición formal de \textbf{Perry y Wolf (1991)}: tripleta $\langle \text{componentes}, \text{forma}, \text{lógica} \rangle$.
+  \item Evaluar las analogías estructurales y las divergencias fundamentales entre la ingeniería civil y el software.
+  \item Identificar y mitigar los fenómenos de \textbf{desalineación arquitectónica} (\emph{architectural mismatch}) y \textbf{erosión arquitectónica} (\emph{architectural drift / erosion}).
+  \item Diferenciar con rigor conceptual entre \textbf{Modelos de Referencia}, \textbf{Arquitecturas de Referencia} (analizando el caso industrial \textbf{AUTOSAR}) y \textbf{Familias de Productos Software} (\emph{Software Product Lines}).
+  \item Gestionar la \textbf{variabilidad software} (\emph{software variability}) frente a los elementos nucleares comunes (\emph{commonalities}).
+  \item Aplicar de manera sistemática los principios de \textbf{Separación de Responsabilidades (SoC)}, \textbf{Ocultamiento de Información} (\emph{Information Hiding}), \textbf{Alta Cohesión} y \textbf{Bajo Acoplamiento}.
+  \item Detectar y refactorizar anti-patrones críticos de diseño como la \textbf{God Class} (Blob) y las \textbf{dependencias circulares} mediante el principio de dependencias acíclicas (ADP).
+  \item Distinguir, relacionar e implementar sin ambigüedades la tríada: \textbf{Dependency Inversion Principle (DIP)}, \textbf{Inversion of Control (IoC)} y \textbf{Dependency Injection (DI)}, evaluando su impacto directo en la testeabilidad y la mantenibilidad.
+\end{itemize}
+\end{tcolorbox}
+
+\vspace{1em}
+
+% ==============================================================================
+% SECCIÓN 1: CONCEPTO DE ARQUITECTURA SOFTWARE
+% ==============================================================================
+\section{Concepto de Arquitectura Software (AS)}
+\label{sec:concepto-as}
+
+\subsection{Evolución y necesidad de la disciplina}
+
+Durante las primeras décadas de la informática, el desarrollo de software se centraba fundamentalmente en la resolución algorítmica y la manipulación de estructuras de datos discretas (lo que Niklaus Wirth sintetizó en su célebre obra \emph{Algorithms + Data Structures = Programs}). En aquellos sistemas, el tamaño del código era reducido y un único programador o un equipo pequeño podía retener en su mente la totalidad del comportamiento del programa.
+
+Sin embargo, a medida que los sistemas crecieron en escala, criticidad y complejidad, la causa principal del fracaso de los proyectos dejó de ser la corrección algorítmica interna para convertirse en la incapacidad de gestionar la \textbf{interacción global de componentes heterogéneos}, la integración de subsistemas distribuidos y la satisfacción de atributos de calidad como la disponibilidad, escalabilidad, seguridad y mantenibilidad.
+
+\begin{definicion}{Arquitectura Software (AS)}
+La \textbf{Arquitectura Software} de un sistema es el conjunto de estructuras requeridas para razonar sobre el sistema, el cual comprende los elementos de software (componentes), las relaciones entre ellos (conectores y topología) y las propiedades visibles de ambos. Representa la versión moderna del diseño de sistemas complejos en el nivel más alto de abstracción.
+\end{definicion}
+
+Una arquitectura software adecuada:
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Reduce la complejidad cognitiva:} Permite a los seres humanos razonar sobre sistemas masivos ocultando los detalles de implementación de bajo nivel bajo abstracciones bien delimitadas.
+  \item \textbf{Canaliza la comunicación entre partes interesadas (\emph{stakeholders}):} Actúa como el lenguaje común entre perfiles dispares: desarrolladores, arquitectos de infraestructura, directores de negocio, especialistas de seguridad y clientes finales.
+  \item \textbf{Encarna las decisiones de diseño más tempranas y de mayor coste de cambio:} Cambiar un algoritmo de ordenación en una clase toma minutos; cambiar una arquitectura monolítica a microservicios orientados a eventos puede exigir meses o años de esfuerzo con alto riesgo comercial.
+\end{itemize}
+
+\subsection{La perspectiva de los Stakeholders y las Vistas Arquitectónicas}
+
+Un error común entre ingenieros noveles consiste en pensar que la arquitectura software se reduce a un único diagrama en bloque. La realidad es que un sistema complejo no puede representarse de forma inteligible en un único plano:
+\begin{itemize}[leftmargin=1.5em]
+  \item Para un \textbf{desarrollador}, la arquitectura se visualiza en términos de clases, interfaces, paquetes y patrones de diseño orientados a objetos.
+  \item Para un \textbf{administrador de sistemas o ingeniero DevOps}, la arquitectura se visualiza como contenedores, máquinas virtuales, balanceadores de carga, redes virtuales, clústeres de bases de datos y tuberías de despliegue continuo.
+  \item Para el \textbf{responsable de negocio o cliente}, la arquitectura es la materialización de los casos de uso, los límites de coste de infraestructura y el cumplimiento normativo (como GDPR o PCI-DSS).
+\end{itemize}
+
+\begin{importante}{El modelo de vistas de Kruchten (4+1)}
+Para satisfacer a los distintos \emph{stakeholders} sin caer en la confusión, la ingeniería de software estandarizó el uso de \textbf{vistas arquitectónicas} (consolidado en el estándar \textbf{ISO/IEC/IEEE 42010}):
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Vista Lógica:} Satisface los requisitos funcionales. Se enfoca en paquetes, clases, capas y modelos de dominio.
+  \item \textbf{Vista de Procesos:} Analiza la concurrencia, rendimiento, sincronización, hilos de ejecución e integridad de transacciones en tiempo de ejecución.
+  \item \textbf{Vista de Desarrollo (o Implementación):} Modela la organización del código fuente, librerías, dependencias de módulos y artefactos compilados.
+  \item \textbf{Vista Física (o de Despliegue):} Representa la topología de hardware, topología de red, servidores y nube donde corre el software.
+  \item \textbf{Casos de Uso / Escenarios (+1):} Cosan y validan las cuatro vistas anteriores asegurando que la arquitectura cumpla los objetivos del sistema.
+\end{enumerate}
+\end{importante}
+
+\subsection{La Definición Formal de Perry y Wolf (1991)}
+
+En 1991, Dewayne Perry y Alexander Wolf publicaron un artículo seminal titulado \emph{``Foundations for the Study of Software Architecture''}, estableciendo la primera fórmula analítica rigurosa para describir formalmente una arquitectura software:
+
+\begin{equation}
+\mathbf{AS} = \{\text{\textbf{Elementos (Componentes)}}, \text{\textbf{Forma}}, \text{\textbf{Lógica / Rationale}}\}
+\end{equation}
+
+Desglosemos cada uno de los términos de esta tripleta:
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Componentes (Elementos Arquitectónicos):}\\
+  Son los bloques constitutivos que encapsulan estado o computación. En lenguajes orientados a objetos y modelado UML se traducen típicamente en clases, paquetes, módulos, bibliotecas o microservicios. Perry y Wolf distinguieron tres subtipos de elementos:
+  \begin{itemize}
+    \item \emph{Elementos de Procesamiento:} Transforman datos (ej., un servicio de cálculo de impuestos).
+    \item \emph{Elementos de Datos:} Almacenan o encapsulan información (ej., un registro, una entidad de base de datos o un DTO).
+    \item \emph{Elementos de Conexión (Conectores):} Mecanismos que posibilitan la comunicación y la transferencia de control entre elementos (ej., llamadas a función, invocaciones RPC, pasarelas REST, colas de mensajes).
+  \end{itemize}
+
+  \item \textbf{Forma (Form):}\\
+  Define cómo se organizan, interconectan y estructuran espacialmente dichos componentes. Establece las restricciones de topología, la tipología de conexiones permitidas y las propiedades que deben preservar los elementos en su interacción (por ejemplo: ``los componentes de la capa de interfaz de usuario sólo pueden invocar a la capa de aplicación, nunca a la capa de acceso a datos de forma directa'').
+
+  \item \textbf{Lógica o Justificación (\emph{Rationale}):}\\
+  Representa el \textbf{porqué} de las decisiones de diseño. Documenta la motivación técnica, funcional o de negocio que impulsó la elección de un componente o patrón concreto frente a sus alternativas. Responde a preguntas como: \emph{¿Por qué se eligió una base de datos NoSQL basada en grafos en lugar de una relacional?} o \emph{¿Por qué se seleccionó un patrón Publicador-Suscriptor en lugar de llamadas síncronas HTTP?} Sin la lógica, los futuros ingenieros no pueden evaluar si un cambio en el sistema violará las asunciones originales del diseño.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  box/.style={rectangle, draw=primary, fill=bglight, thick, rounded corners=3mm, inner sep=10pt, text width=3.8cm, align=center},
+  arrow/.style={-{Stealth[scale=1.2]}, thick, color=secondary}
+]
+  \node[box, fill=primary!10] (formula) at (0, 3) {\large\textbf{Arquitectura Software (AS)}\\[4pt] $\mathbf{AS = \{\text{Comp}, \text{Forma}, \text{Lógica}\}}$};
+  
+  \node[box] (comp) at (-4.8, 0) {\textbf{Componentes}\\[3pt]\footnotesize Clases, paquetes UML, microservicios, bases de datos, buses de eventos};
+  \node[box] (forma) at (0, 0) {\textbf{Forma}\\[3pt]\footnotesize Topología, relaciones, puertos, protocolos y restricciones de interconexión};
+  \node[box] (logica) at (4.8, 0) {\textbf{Lógica (\emph{Rationale})}\\[3pt]\footnotesize Justificación de decisiones, requisitos no funcionales y selección de patrones};
+
+  \draw[arrow] (formula.south) -- (comp.north);
+  \draw[arrow] (formula.south) -- (forma.north);
+  \draw[arrow] (formula.south) -- (logica.north);
+  
+  \node[draw=accent, thick, dashed, rounded corners=2mm, fit=(comp) (forma), inner sep=5pt, label=below:\textcolor{accent}{\textbf{Estructura del Diseño}}] {};
+  \node[draw=alertred, thick, dashed, rounded corners=2mm, fit=(logica), inner sep=5pt, label=below:\textcolor{alertred}{\textbf{Decisiones de Diseño}}] {};
+\end{tikzpicture}
+\caption{Desglose de la definición de Perry \& Wolf: Estructura del diseño y decisiones de diseño.}
+\label{fig:perry-wolf}
+\end{figure}
+
+\subsection{La Analogía con la Arquitectura Civil: Puntos Fuertes y Límites}
+
+Desde los inicios de la disciplina, ha sido común establecer un paralelismo entre la construcción de edificios o puentes y el diseño de software. Esta metáfora pedagógica resulta sumamente ilustrativa pero posee límites muy estrictos que todo ingeniero debe conocer:
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l p{5.5cm} p{6.5cm}}
+\toprule
+\textbf{Elemento Civil} & \textbf{Equivalente en Software} & \textbf{Función y Rol Técnico} \\
+\midrule
+\textbf{Ladrillos} & Módulos y funciones elementales & Unidades mínimas de código ejecutable que resuelven operaciones atómicas. \\
+\addlinespace
+\textbf{Bloques prefabr.} & Componentes software reutilizables & Librerías de terceros (npm, Maven, NuGet), frameworks empaquetados, SDKs. \\
+\addlinespace
+\textbf{Cemento} & Conectores de software & Mecanismos de comunicación: llamadas de procedimiento, middleware, colas AMQP, gRPC, sockets. \\
+\addlinespace
+\textbf{Moldes / Planos} & Patrones de diseño y estilos & Estructuras probadas de antemano (e.g., Singleton, Observer, Modelo-Vista-Controlador, Microservicios). \\
+\addlinespace
+\textbf{Normas edificación} & Estándares, linters y contratos de interfaz & Restricciones normativas de calidad, seguridad y buenas prácticas impuestas al equipo. \\
+\bottomrule
+\end{tabularx}
+\caption{Correspondencia entre arquitectura civil y arquitectura de software.}
+\label{tab:analogia-civil}
+\end{table}
+
+\begin{importante}{¿Dónde fracasa la analogía civil?}
+A diferencia de los puentes o rascacielos:
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{El software no está sujeto a leyes físicas:} El software es una entidad puramente conceptual e inmaterial. No sufre fatiga de materiales mecánicos, pero sí sufre obsolescencia conceptual ante el cambio de los requerimientos.
+  \item \textbf{Costo marginal de duplicación nulo:} Copiar un componente software infinitas veces cuesta cero céntimos; levantar un segundo rascacielos idéntico requiere el mismo cemento, acero y mano de obra que el primero.
+  \item \textbf{Tasa de modificación continua (\emph{Malleability}):} En una obra civil, es impensable ensanchar los cimientos una vez levantada una torre de sesenta pisos. En software, el negocio exige modificar el núcleo funcional en cada ciclo semanal de entrega (\emph{Agile/CI/CD}). Por ello, la arquitectura software debe diseñarse explícitamente para admitir la \textbf{evolución continua} y el cambio controlado.
+\end{enumerate}
+\end{importante}
+
+\subsection{El Rol del Arquitecto Software en la Organización}
+
+Antiguamente, el arquitecto de sistemas solía concebirse como el ``arquitecto de torre de marfil'' (\emph{Ivory Tower Architect}), un profesional aislado que producía densos volúmenes de documentación UML y ordenaba a los programadores implementarla sin intervenir en el código. Hoy en día, dicho rol está totalmente superado.
+
+El arquitecto software moderno es un \textbf{líder técnico estratégico} cuya misión principal es actuar de puente entre dos universos:
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{El espacio del problema (Negocio):} Requisitos funcionales (lo que el sistema debe hacer comercialmente) y restricciones de tiempo y presupuesto.
+  \item \textbf{El espacio de la solución (Ingeniería):} Requisitos no funcionales o atributos de calidad (disponibilidad del 99.999\%, latencia máxima de 15 ms, cumplimiento de estándares de cifrado militar).
+\end{itemize}
+
+El arquitecto software no toma decisiones para satisfacer gustos personales o tendencias pasajeras del mercado, sino para \textbf{resolver compromisos técnicos (\emph{trade-offs})}. Si un sistema requiere altísima velocidad de escritura a escala global, el arquitecto sabrá que según el teorema CAP deberá relajar la consistencia inmediata en favor de la consistencia eventual. La arquitectura software es, ante todo, la gestión consciente y fundamentada de los trade-offs.
+
+\subsection{Desalineación (\emph{Mismatch}) y Erosión Arquitectónica}
+
+Durante el ciclo de vida de un sistema, la arquitectura prevista rara vez se mantiene inmutable. Dos fenómenos de vital importancia en la teoría y práctica de la ingeniería son:
+
+\begin{definicion}{Architectural Mismatch (Desalineación Arquitectónica)}
+Descrito originalmente por David Garlan, Robert Allen y John Ockerbloom en 1995, el \textbf{architectural mismatch} ocurre al intentar integrar dos o más componentes software independientes que fueron desarrollados bajo \textbf{asunciones implícitas incompatibles}.
+\end{definicion}
+
+Estas asunciones incompatibles suelen clasificarse en:
+\begin{itemize}[leftmargin=1.5em]
+  \item \emph{Asunciones sobre el control:} ¿Qué componente alberga el bucle principal de ejecución? (ej., dos bibliotecas que ambas asumen ser las propietarias exclusivas del hilo de la interfaz gráfica).
+  \item \emph{Asunciones sobre los datos:} Formato, semántica y propiedad del estado de los datos transferidos (ej., representación binaria big-endian vs.\ little-endian, formatos JSON enriquecidos vs.\ arrays planos).
+  \item \emph{Asunciones sobre el entorno y protocolos:} Dependencias de hilos, versiones de runtime, modelos síncronos versus asíncronos.
+\end{itemize}
+
+\begin{definicion}{Architectural Drift y Architectural Erosion (Erosión Arquitectónica)}
+\begin{itemize}
+  \item \textbf{Architectural Drift (Deriva Arquitectónica):} Introducción paulatina de modificaciones o extensiones en el código que no fueron contempladas en la arquitectura original pero que no violan directamente sus reglas fundamentales.
+  \item \textbf{Architectural Erosion (Erosión / Degradación Arquitectónica):} Violación flagrante y continuada de las reglas, fronteras y directrices arquitectónicas originales (por ejemplo, llamadas directas desde la capa de vista a la base de datos para ``ahorrar tiempo'' en una entrega urgente).
+\end{itemize}
+\end{definicion}
+
+La consecuencia inevitable de la erosión es la acumulación masiva de \textbf{deuda técnica arquitectónica}: el sistema se vuelve frágil, impredecible, cualquier cambio en un módulo desencadena fallos inesperados en subsistemas lejanos (\emph{ripple effect}) y el coste de añadir nuevas características crece de forma exponencial hasta forzar la reescritura completa del sistema.
+
+\begin{ejemplo}{Detección automatizada de la erosión con Architecture-as-Code}
+En la ingeniería moderna, para evitar que la arquitectura de un sistema degrade con el paso de los sprints se emplean \textbf{pruebas unitarias de arquitectura} (con herramientas como \emph{ArchUnit} en Java/.NET o linters de dependencias modulares). Un test de arquitectura se define en código:
+\begin{lstlisting}[language=java, caption={Ejemplo de test con ArchUnit para impedir la erosión arquitectónica}]
+@Test
+public void capas_deben_respetar_direccion_estricta() {
+    noClasses()
+        .that().resideInAPackage("..domain..")
+        .should().dependOnClassesThat()
+        .resideInAPackage("..infrastructure..")
+        .because("Las entidades de dominio nunca deben depender de detalles de base de datos o frameworks externos (DIP)")
+        .check(classes);
+}
+\end{lstlisting}
+Si algún desarrollador intenta saltarse la arquitectura inyectando un driver JDBC en una entidad del dominio, el pipeline de Integración Continua (CI) falla de inmediato.
+\end{ejemplo}
+
+% ==============================================================================
+% SECCIÓN 2: MODELOS, ARQUITECTURAS DE REFERENCIA Y LÍNEAS DE PRODUCTO
+% ==============================================================================
+\section{Modelos de Referencia, Arquitecturas de Referencia y Familias de Productos}
+\label{sec:referencia-familias}
+
+Uno de los temas más evaluados y de mayor impacto estratégico en empresas que desarrollan software a gran escala es el paso desde la solución aislada a la reutilización sistemática.
+
+\subsection{Distinción entre Modelo de Referencia y Arquitectura de Referencia}
+
+Existe una jerarquía formal en el nivel de abstracción que conecta un problema genérico con una implementación concreta:
+
+\begin{definicion}{Modelo de Referencia}
+Un \textbf{Modelo de Referencia} es una división conceptual de la funcionalidad requerida por un dominio de problemas, estructurada en bloques funcionales con flujos de datos e información claramente definidos entre ellos, pero \textbf{completamente desacoplada de cualquier decisión de implementación software específica}.
+\end{definicion}
+
+\begin{ejemplo}{Ejemplos clásicos de Modelos de Referencia}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Compilador clásico:} Cualquier compilador se descompone conceptualmente en: \emph{Analizador Léxico} $\to$ \emph{Analizador Sintáctico} $\to$ \emph{Analizador Semántico} $\to$ \emph{Generador de Código Intermedio} $\to$ \emph{Optimizador} $\to$ \emph{Generador de Código Destino}. Esta descomposición es un modelo de referencia; no especifica si el compilador se escribe en C++, Rust o Java, ni si se compila en un único ejecutable o en herramientas separadas conectadas por tuberías.
+  \item \textbf{Modelo OSI de 7 Capas de ISO:} Define abstractamente qué debe hacer la capa de transporte, de red, de enlace, etc., sin imponer sockets POSIX, tarjetas ethernet específicas ni protocolos propietarios.
+\end{itemize}
+\end{ejemplo}
+
+\begin{definicion}{Arquitectura de Referencia}
+Una \textbf{Arquitectura de Referencia} es el resultado de mapear o proyectar un \textbf{Modelo de Referencia} sobre componentes de software reales, protocolos concretos, flujos de datos operacionales y estilos arquitectónicos preestablecidos.
+\end{definicion}
+
+Una arquitectura de referencia no es todavía el producto final comercial, sino una \textbf{plantilla arquitectónica probada y validada} que sirve de guía para construir múltiples productos dentro de un mismo dominio vertical.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  box/.style={rectangle, draw=primary, fill=bglight, thick, rounded corners=2mm, minimum height=1cm, minimum width=3cm, align=center},
+  arrow/.style={-{Stealth[scale=1.1]}, thick, color=secondary}
+]
+  \node[box] (mod) at (0, 2) {\textbf{Modelo de Referencia}\\[2pt]\footnotesize División funcional abstracta};
+  \node[box] (est) at (0, 0) {\textbf{Estilos Arquitectónicos}\\[2pt]\footnotesize Por capas, microservicios, etc.};
+  
+  \node[box, fill=secondary!15, draw=secondary] (arqref) at (4.8, 1) {\textbf{Arquitectura de Referencia}\\[2pt]\footnotesize Mapeo a componentes y datos};
+  
+  \node[box, fill=accent!20, draw=accent] (custom) at (4.8, -1.5) {\textbf{Proceso de Personalización}\\[2pt]\footnotesize (\emph{Derivación y Variabilidad})};
+  
+  \node[box, fill=alertgreen!15, draw=alertgreen] (arqsis) at (10.2, 1) {\textbf{Arquitectura Software}\\[2pt]\footnotesize Solución global para la familia};
+  \node[box, fill=alertgreen!25, draw=alertgreen] (prod) at (10.2, -1.5) {\textbf{Arquitectura del Producto}\\[2pt]\footnotesize Sistema concreto en producción};
+
+  \draw[arrow] (mod.east) -- (arqref.west);
+  \draw[arrow] (est.east) -- (arqref.west);
+  \draw[arrow] (arqref.east) -- (arqsis.west);
+  \draw[arrow] (arqref.south) -- (custom.north);
+  \draw[arrow] (custom.east) -- (prod.west);
+  \draw[arrow] (arqsis.south) -- (prod.north);
+\end{tikzpicture}
+\caption{Flujo conceptual: De los modelos y estilos a la arquitectura del producto software final.}
+\label{fig:referencia-derivacion}
+\end{figure}
+
+\subsection{Caso de Estudio Industrial: AUTOSAR en la Automoción}
+
+Uno de los ejemplos de mayor relevancia en sistemas embebidos de tiempo real y misión crítica es el estándar \textbf{AUTOSAR} (\emph{Automotive Open System Architecture}). 
+
+Antes de AUTOSAR, cada fabricante de automóviles (OEM) y proveedor de primer nivel (Tier 1) desarrollaba el software de las centralitas electrónicas (ECUs - \emph{Engine Control Units}) mezclando la lógica de control del motor o frenos con los drivers de bajo nivel del microcontrolador específico. Si el fabricante cambiaba de chip de silicio, el 100\% del software debía desecharse y reescribirse.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  layer/.style={rectangle, draw=primary, thick, rounded corners=1.5mm, minimum width=11cm, minimum height=0.9cm, align=center},
+  sublayer/.style={rectangle, draw=secondary, fill=bglight, thick, rounded corners=1mm, minimum height=0.7cm, align=center}
+]
+  % Capa de Aplicación
+  \node[layer, fill=primary!15] (app) at (0, 3.2) {\textbf{Capa de Aplicación (Application Layer)}\\ \footnotesize Componentes Software Independientes (\emph{AUTOSAR Software Components - SWCs})};
+
+  % RTE
+  \node[layer, fill=accent!25, draw=accent] (rte) at (0, 1.9) {\textbf{AUTOSAR Runtime Environment (RTE)}\\ \footnotesize Bus Virtual Funcional (\emph{Virtual Functional Bus - VFB})};
+
+  % Basic Software
+  \node[layer, fill=secondary!10, minimum height=2.2cm] (bsw) at (0, -0.1) {};
+  \node[above] at (bsw.north) [yshift=-0.4cm] {\textbf{Software Básico (Basic Software - BSW)}};
+  
+  % Subcapas BSW
+  \node[sublayer, text width=2.2cm] at (-3.9, -0.4) {\scriptsize \textbf{Servicios}\\ OS, Memoria, Red};
+  \node[sublayer, text width=2.2cm] at (-1.3, -0.4) {\scriptsize \textbf{Comunicación}\\ CAN, LIN, FlexRay};
+  \node[sublayer, text width=2.2cm] at (1.3, -0.4) {\scriptsize \textbf{Abstracción ECU}\\ Drivers abstractos};
+  \node[sublayer, text width=2.4cm] at (3.9, -0.4) {\scriptsize \textbf{Drivers Complejos}\\ PWM rápido, sensores};
+
+  \node[sublayer, fill=primary!10, text width=10.2cm] at (0, -0.9) {\scriptsize \textbf{MCAL (Microcontroller Abstraction Layer)}: Drivers hardware específicos};
+
+  % Hardware
+  \node[layer, fill=textdark!20, draw=textdark] (hw) at (0, -1.9) {\textbf{ECU Hardware (Microcontrolador, Sensores y Actuadores)}};
+
+  % Conexiones
+  \draw[Stealth-Stealth, thick, color=accent] (app.south) -- (rte.north);
+  \draw[Stealth-Stealth, thick, color=accent] (rte.south) -- (bsw.north);
+  \draw[Stealth-Stealth, thick, color=secondary] (bsw.south) -- (hw.north);
+\end{tikzpicture}
+\caption{Arquitectura de Referencia AUTOSAR: Desacoplamiento radical mediante el RTE.}
+\label{fig:autosar}
+\end{figure}
+
+\begin{definicion}{Estructura de la Arquitectura de Referencia AUTOSAR}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Application Layer:} Contiene los componentes funcionales (\emph{SW-Cs}), tales como el algoritmo de control de crucero adaptativo o la gestión del airbag. Estos componentes ignoran por completo qué microcontrolador corre por debajo o por qué bus físico viajan los mensajes.
+  \item \textbf{AUTOSAR Runtime Environment (RTE):} Es el middleware central. Actúa como un conector universal (\emph{Virtual Functional Bus}). Cualquier llamada entre componentes se realiza a través de las interfaces estándar del RTE, garantizando portabilidad absoluta.
+  \item \textbf{Basic Software (BSW):} Provee los servicios esenciales agrupados en:
+    \begin{itemize}
+      \item \emph{Servicios de Sistema y SO:} Planificador de tareas en tiempo real (OSEK/VDX modificado).
+      \item \emph{Pila de Comunicaciones:} Abstracción de protocolos de automoción (CAN, LIN, FlexRay, Automotive Ethernet).
+      \item \emph{Capa de Abstracción de ECU:} Aisla las peculiaridades de la placa de circuito impreso.
+      \item \emph{MCAL (Microcontroller Abstraction Layer):} Es la única capa dependiente del silicio que mapea los registros del microcontrolador.
+    \end{itemize}
+\end{itemize}
+\end{definicion}
+
+\subsection{De Sistemas Aislados a Familias de Sistemas (\emph{Software Product Lines})}
+
+Históricamente, las organizaciones de software operaban bajo el paradigma del \textbf{diseño artesanal por producto}: para cada nuevo cliente o variante de software se creaba un proyecto independiente bifurcando el código anterior (\emph{copy-paste-modify}). Este enfoque resulta catastrófico: los parches de seguridad deben aplicarse manualmente $N$ veces y los costes de mantenimiento crecen a un ritmo inasumible.
+
+El enfoque moderno se fundamenta en las \textbf{Familias de Sistemas} o \textbf{Líneas de Producto Software (Software Product Lines - SPL)}:
+
+\begin{definicion}{Líneas de Producto Software (SPL)}
+Una Línea de Producto Software es un paradigma de ingeniería de software para generar colecciones de sistemas similares a partir de un conjunto compartido de activos software base (\emph{core assets}), explotando sistemáticamente sus \textbf{puntos comunes} (\emph{commonalities}) y gestionando formalmente sus \textbf{puntos de variación} (\emph{variabilities}).
+\end{definicion}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  box/.style={rectangle, draw=primary, thick, rounded corners=2mm, align=center, inner sep=6pt},
+  arrow/.style={-{Stealth[scale=1.1]}, thick, color=secondary}
+]
+  % Enfoque Antiguo
+  \node[box, fill=alertred!10, text width=3.5cm] (oldDesign) at (-4, 2) {\textbf{Diseño Aislado}\\ \footnotesize 1 Diseño específico para 1 Sistema único};
+  \node[box, fill=alertred!20, text width=3.5cm] (oldSys) at (-4, -0.5) {\textbf{Sistema Aislado}\\ \footnotesize Código cerrado y duplicado};
+  \draw[arrow, color=alertred] (oldDesign) -- (oldSys);
+  \node[above] at (-4, 2.7) {\textcolor{alertred}{\textbf{Paradigma Antiguo (1:1)}}};
+
+  % Enfoque Moderno
+  \node[box, fill=primary!15, text width=6.5cm] (asModern) at (3.5, 2) {\textbf{Arquitectura Software Compartida}\\ \footnotesize Activos comunes, frameworks, middleware y estilos};
+  
+  \node[box, fill=alertgreen!15, text width=2cm] (p1) at (0.5, -0.5) {\textbf{Producto A}\\ \footnotesize Gama Básica};
+  \node[box, fill=alertgreen!25, text width=2cm] (p2) at (3.5, -0.5) {\textbf{Producto B}\\ \footnotesize Gama Pro};
+  \node[box, fill=alertgreen!35, text width=2cm] (p3) at (6.5, -0.5) {\textbf{Producto C}\\ \footnotesize Gama Enterprise};
+
+  \draw[arrow] (asModern.south) -- (p1.north);
+  \draw[arrow] (asModern.south) -- (p2.north);
+  \draw[arrow] (asModern.south) -- (p3.north);
+  \node[above] at (3.5, 2.7) {\textcolor{primary}{\textbf{Paradigma Moderno: Familia de Sistemas (1:N)}}};
+\end{tikzpicture}
+\caption{Transición desde el diseño artesanal aislado a la arquitectura de familias de productos.}
+\label{fig:familias-sistemas}
+\end{figure}
+
+\subsection{El Proceso de Personalización y la Gestión de la Variabilidad}
+
+La ``magia'' de una buena arquitectura software radica en que un porcentaje altísimo del sistema (frecuentemente entre el 70\% y el 90\%) reside en las \textbf{partes comunes} (\emph{core assets}): autenticación, transaccionalidad, persistencia, telemetría y comunicación.
+
+Las partes variables representan los aspectos que diferencian a un producto concreto de otro. La \textbf{variabilidad software} puede resolverse en distintos instantes del ciclo de vida:
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{En tiempo de diseño / desarrollo:} Mediante herencia, polimorfismo, interfaces y aplicación del patrón \emph{Strategy} o \emph{Template Method}.
+  \item \textbf{En tiempo de compilación / empaquetado:} Mediante preprocesadores, compilación condicional (e.g., directivas en C/C++ o Rust) o empaquetado modular (\emph{tree-shaking}, perfiles de Maven/Gradle).
+  \item \textbf{En tiempo de despliegue / arranque:} Mediante ficheros de configuración, variables de entorno e inyección de dependencias parametrizada en el contenedor IoC.
+  \item \textbf{En tiempo de ejecución (\emph{Runtime}):} Mediante arquitectura de plugins dinámicos (\emph{reflection}), carga perezosa (\emph{lazy loading}) o banderas de características en vivo (\emph{Feature Flags / Toggles}).
+\end{itemize}
+
+% ==============================================================================
+% SECCIÓN 3: PRINCIPIOS DE DISEÑO SOFTWARE
+% ==============================================================================
+\section{Principios Fundamentales de Diseño Software}
+\label{sec:principios-diseno}
+
+La arquitectura de un sistema no es producto del azar ni de la inspiración artística; se sustenta sobre un conjunto inmutable de \textbf{principios de diseño} formulados por los pioneros de la computación. Violar estos principios degrada irreversiblemente cualquier arquitectura, con independencia de los frameworks o tecnologías utilizados.
+
+\subsection{Separación de Responsabilidades (\emph{Separation of Concerns - SoC})}
+
+Formulado originariamente por Edsger W. Dijkstra en su ensayo de 1974 \emph{``On the role of scientific thought''}, el principio de Separación de Responsabilidades establece que:
+
+\begin{definicion}{Separation of Concerns (SoC)}
+Un sistema complejo debe descomponerse en secciones o módulos diferenciados de forma que cada uno de ellos se encargue de una preocupación o responsabilidad única y claramente delimitada, minimizando de raíz los solapamientos de funcionalidad.
+\end{definicion}
+
+SoC opera a todos los niveles de granularidad arquitectónica:
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Nivel de Capas (Layers):} Separar rigurosamente la \emph{Capa de Presentación} (UI / API REST), la \emph{Capa de Negocio o Dominio} (cálculos, validaciones, reglas comerciales) y la \emph{Capa de Persistencia e Infraestructura} (bases de datos, colas de mensajería, llamadas a APIs externas).
+  \item \textbf{Nivel de Paquetes UML / Módulos:} Agrupar elementos por coherencia funcional (e.g., módulo de facturación, módulo de envíos, módulo de usuarios).
+  \item \textbf{Nivel de Clases:} Cumplir el principio de Responsabilidad Única (SRP - \emph{Single Responsibility Principle}): cada clase debe tener un único motivo para cambiar.
+\end{itemize}
+
+\subsection{Acoplamiento y Cohesión: El Binomio Maestro}
+
+La calidad estructural de cualquier arquitectura software se mide mediante dos propiedades contrapuestas y complementarias: \textbf{Acoplamiento} y \textbf{Cohesión}.
+
+\begin{definicion}{Acoplamiento (Coupling)}
+El \textbf{acoplamiento} mide el \textbf{grado de interdependencia entre dos o más módulos o bloques} de una arquitectura. Indica con cuánta fuerza depende un componente de los detalles internos de otro. \\
+\textbf{Objetivo Arquitectónico:} Conseguir \textbf{Bajo Acoplamiento (\emph{Loose Coupling})}.
+\end{definicion}
+
+\begin{definicion}{Cohesión (Cohesion)}
+La \textbf{cohesión} mide la \textbf{fuerza y relevancia con la que los elementos internos (variables, métodos, submódulos) dentro de un mismo componente trabajan juntos} para cumplir una única función bien definida. \\
+\textbf{Objetivo Arquitectónico:} Conseguir \textbf{Alta Cohesión (\emph{High Cohesion})}.
+\end{definicion}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  node distance=1.5cm,
+  nodeBad/.style={circle, draw=alertred, fill=alertred!20, thick, minimum size=0.9cm},
+  nodeGood/.style={circle, draw=alertgreen, fill=alertgreen!20, thick, minimum size=0.9cm},
+  boxBad/.style={draw=alertred, dashed, thick, rounded corners=3mm, inner sep=12pt, label=below:\textbf{\textcolor{alertred}{Baja Cohesión, Alto Acoplamiento}}},
+  boxGood/.style={draw=alertgreen, thick, rounded corners=3mm, inner sep=12pt, label=below:\textbf{\textcolor{alertgreen}{Alta Cohesión, Bajo Acoplamiento}}}
+]
+  % Sistema Malo
+  \node[nodeBad] (a1) at (-4.5, 2) {};
+  \node[nodeBad] (a2) at (-3.2, 1.2) {};
+  \node[nodeBad] (a3) at (-5.2, 0.5) {};
+  
+  \node[nodeBad] (b1) at (-2.0, 2.2) {};
+  \node[nodeBad] (b2) at (-1.2, 0.8) {};
+  \node[nodeBad] (b3) at (-2.5, 0.2) {};
+
+  \draw[thick, alertred] (a1) -- (b1);
+  \draw[thick, alertred] (a1) -- (b2);
+  \draw[thick, alertred] (a2) -- (b1);
+  \draw[thick, alertred] (a3) -- (b3);
+  \draw[thick, alertred] (a2) -- (b3);
+  \draw[thick, alertred] (a1) -- (a2);
+  \draw[thick, alertred] (b1) -- (b2);
+
+  \node[boxBad, fit=(a1) (a2) (a3) (b1) (b2) (b3)] (box1) {};
+
+  % Sistema Bueno
+  \node[nodeGood] (c1) at (2.5, 1.8) {};
+  \node[nodeGood] (c2) at (1.6, 0.9) {};
+  \node[nodeGood] (c3) at (2.8, 0.4) {};
+
+  \draw[thick, color=alertgreen] (c1) -- (c2);
+  \draw[thick, color=alertgreen] (c2) -- (c3);
+  \draw[thick, color=alertgreen] (c1) -- (c3);
+
+  \node[draw=secondary, rounded corners=2mm, inner sep=8pt, fit=(c1) (c2) (c3), label=above:\footnotesize Módulo A] (modA) {};
+
+  \node[nodeGood] (d1) at (5.5, 1.8) {};
+  \node[nodeGood] (d2) at (4.6, 0.9) {};
+  \node[nodeGood] (d3) at (5.8, 0.4) {};
+
+  \draw[thick, color=alertgreen] (d1) -- (d2);
+  \draw[thick, color=alertgreen] (d2) -- (d3);
+  \draw[thick, color=alertgreen] (d1) -- (d3);
+
+  \node[draw=secondary, rounded corners=2mm, inner sep=8pt, fit=(d1) (d2) (d3), label=above:\footnotesize Módulo B] (modB) {};
+
+  % Canal desacoplado
+  \draw[{Stealth[scale=1.2]}-{Stealth[scale=1.2]}, line width=1.5pt, color=primary] (modA.east) -- (modB.west) node[midway, above] {\scriptsize Interfaz};
+
+  \node[boxGood, fit=(modA) (modB)] (box2) at (3.7, 0.8) {};
+\end{tikzpicture}
+\caption{Comparativa estructural: sistemas caóticos acoplados frente a sistemas modulares altamente cohesivos y desacoplados.}
+\label{fig:cohesion-acoplamiento}
+\end{figure}
+
+Para responder con matrícula de honor en un examen técnico o desenvolverse en una empresa de primer nivel, el ingeniero debe dominar la clasificación de acoplamiento y cohesión propuesta por Stevens, Myers y Constantine:
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l p{5cm} X}
+\toprule
+\textbf{Nivel de Acoplamiento} & \textbf{Naturaleza de la Interacción} & \textbf{Veredicto de Ingeniería} \\
+\midrule
+\textbf{De Contenido (\emph{Content})} & Un módulo modifica directamente datos o código interno de otro módulo. & \textcolor{alertred}{\textbf{Inaceptable}}. Rompe cualquier encapsulamiento. \\
+\addlinespace
+\textbf{Común / Global (\emph{Common})} & Múltiples módulos comparten y mutan las mismas variables o memorias globales. & \textcolor{alertred}{\textbf{Peligroso}}. Causa efectos colaterales impredecibles y condiciones de carrera. \\
+\addlinespace
+\textbf{De Control (\emph{Control})} & Un módulo pasa flags booleanos o códigos de operación para mandar qué camino ejecutar dentro de otro. & \textcolor{accent}{\textbf{Indeseable}}. Conoce la lógica interna del receptor. \\
+\addlinespace
+\textbf{De Estampado (\emph{Stamp})} & Se pasa una estructura de datos completa (ej. objeto Usuario con 40 campos) cuando la función sólo necesita 2 campos. & \textcolor{accent}{\textbf{Aceptable pero mejorable}}. Acopla al esquema de datos completo. \\
+\addlinespace
+\textbf{De Datos (\emph{Data})} & Los módulos se comunican pasando exclusivamente argumentos primitivos o contratos estrictos. & \textcolor{alertgreen}{\textbf{Excelente}}. Bajo acoplamiento. \\
+\addlinespace
+\textbf{Por Mensajes (\emph{Message})} & Comunicación asíncrona mediante paso de mensajes o eventos sin conocimiento del receptor. & \textcolor{alertgreen}{\textbf{Óptimo}}. Máximo desacoplamiento espacial y temporal. \\
+\bottomrule
+\end{tabularx}
+\caption{Espectro jerárquico de tipos de acoplamiento (de peor a mejor).}
+\label{tab:tipos-acoplamiento}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l p{5cm} X}
+\toprule
+\textbf{Nivel de Cohesión} & \textbf{Principio de Agrupación} & \textbf{Veredicto de Ingeniería} \\
+\midrule
+\textbf{Coincidente} & Elementos reunidos al azar o por conveniencia sin relación real (e.g., típica clase \texttt{GeneralUtils}). & \textcolor{alertred}{\textbf{Pésima}}. Imposible de entender o mantener. \\
+\addlinespace
+\textbf{Lógica} & Agrupa funciones de la misma categoría abstracta (e.g., una clase que procesa todas las entradas de ratón, teclado y red en un switch). & \textcolor{alertred}{\textbf{Baja}}. Viola SRP y mezcla contextos. \\
+\addlinespace
+\textbf{Temporal} & Elementos que deben ejecutarse en el mismo instante temporal (e.g., inicializar base de datos, cargar fuentes y abrir ventana en un único método). & \textcolor{accent}{\textbf{Poco deseable}}. Deberían delegar en sus respectivos subsistemas. \\
+\addlinespace
+\textbf{Procedimental / Comunicac.} & Elementos que operan sobre los mismos datos de entrada/salida o siguen un flujo de pasos. & \textcolor{secondary}{\textbf{Aceptable}}. \\
+\addlinespace
+\textbf{Secuencial} & La salida de una operación es la entrada directa e indispensable de la siguiente (estilo pipeline/tubería). & \textcolor{alertgreen}{\textbf{Buena}}. \\
+\addlinespace
+\textbf{Funcional} & \textbf{Todos los elementos del componente cooperan para cumplir una única tarea bien delimitada} (ej., cálculo de ruta óptima en un grafo). & \textcolor{alertgreen}{\textbf{Ideal}}. Máxima cohesión posible. \\
+\bottomrule
+\end{tabularx}
+\caption{Espectro jerárquico de tipos de cohesión (de peor a mejor).}
+\label{tab:tipos-cohesion}
+\end{table}
+
+\subsection{Anti-patrones de Diseño Estructural: El Anti-patrón God Class}
+
+Cuando se ignoran la separación de responsabilidades y la alta cohesión, surge uno de los anti-patrones más destructivos del desarrollo orientado a objetos:
+
+\begin{definicion}{Anti-patrón God Class (The Blob)}
+Una \textbf{God Class} (o clase todoterreno) es una clase que concentra una cantidad desproporcionada de responsabilidades, estado y lógica de negocio de un sistema, relegando al resto de clases a simples contenedores pasivos de datos (\emph{anemic data holders}).
+\end{definicion}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  blob/.style={ellipse, draw=alertred, fill=alertred!20, thick, minimum width=4cm, minimum height=1.6cm, align=center},
+  satellite/.style={rectangle, draw=primary, fill=bglight, thick, rounded corners=1.5mm, minimum width=1.4cm, minimum height=0.6cm, align=center}
+]
+  \node[blob] (god) at (0, 0) {\textbf{God Class}\\[2pt]\scriptsize 10.000 líneas\\ \scriptsize Baja cohesión / Máxima complejidad};
+
+  \node[satellite] (c1) at (-4, 2) {\scriptsize Usuario};
+  \node[satellite] (c2) at (-1.5, 2.3) {\scriptsize Pedido};
+  \node[satellite] (c3) at (1.5, 2.3) {\scriptsize Factura};
+  \node[satellite] (c4) at (4, 2) {\scriptsize Email};
+  \node[satellite] (c5) at (-4, -2) {\scriptsize PDFExport};
+  \node[satellite] (c6) at (-1.5, -2.3) {\scriptsize BaseDatos};
+  \node[satellite] (c7) at (1.5, -2.3) {\scriptsize Log};
+  \node[satellite] (c8) at (4, -2) {\scriptsize NotifPush};
+
+  \foreach \s in {c1, c2, c3, c4, c5, c6, c7, c8} {
+    \draw[thick, -{Stealth}, alertred] (god) -- (\s);
+    \draw[thick, -{Stealth}, alertred] (\s) -- (god);
+  }
+\end{tikzpicture}
+\caption{Topología estelar tóxica generada por una God Class.}
+\label{fig:god-class}
+\end{figure}
+
+\textbf{Patología y consecuencias de la God Class:}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Alta Complejidad Ciclomática:} Métodos interminables con decenas de niveles de anidamiento condicional (\texttt{if/switch}) para gestionar casos especiales.
+  \item \textbf{Baja Cohesión:} Los métodos manipulan subconjuntos disjuntos de atributos de la clase; el índice métrico LCOM (\emph{Lack of Cohesion in Methods}) se dispara.
+  \item \textbf{Imposibilidad de realizar pruebas unitarias fiables:} Para testear una sencilla regla de cálculo se requiere instanciar una clase que arrastra conexiones de base de datos, clientes de correo y pasarelas de pago.
+  \item \textbf{Bloqueo en el trabajo en equipo:} Múltiples desarrolladores colisionan constantemente en Git al modificar el mismo fichero masivo.
+\end{itemize}
+
+\subsection{Ocultamiento de Información (\emph{Information Hiding}) y Encapsulamiento}
+
+Propuesto por David Parnas en su célebre artículo de 1972 (\emph{``On the Criteria To Be Used in Decomposing Systems into Modules''}):
+
+\begin{definicion}{Ocultamiento de Información (Information Hiding)}
+El principio de ocultamiento de información establece que cada módulo o componente debe \textbf{ocultar a todos los demás un secreto de diseño} (un algoritmo volátil, la estructura interna de una tabla de base de datos o el formato de serialización), exponiendo hacia el exterior únicamente una interfaz pública abstracta, estable y mínima.
+\end{definicion}
+
+\begin{importante}{Diferencia técnica: Encapsulamiento vs.\ Information Hiding}
+A menudo se usan como sinónimos, pero no lo son:
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Encapsulamiento} es el mecanismo del lenguaje de programación que agrupa datos y las operaciones que actúan sobre ellos en una misma unidad (clase o struct), controlando la visibilidad mediante modificadores (\texttt{private}, \texttt{protected}, \texttt{public}).
+  \item \textbf{Information Hiding} es un \textbf{principio de diseño arquitectónico}. Se puede tener una clase perfectamente encapsulada con getters y setters privados que sin embargo viole el Information Hiding si expone hacia el exterior detalles como la clave primaria autoincremental de la base de datos o si obliga al cliente a conocer el orden exacto de llamadas internas.
+\end{itemize}
+\end{importante}
+
+\subsection{El Peligro de las Dependencias Circulares y el Principio ADP}
+
+Una dependencia circular ocurre cuando un conjunto de componentes depende directa o indirectamente de sí mismo: el módulo $A$ depende de $B$, $B$ depende de $C$, y $C$ depende de nuevo de $A$.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  box/.style={rectangle, draw=alertred, fill=alertred!10, thick, rounded corners=2mm, minimum width=2.2cm, minimum height=1cm, align=center},
+  arrow/.style={-{Stealth[scale=1.2]}, line width=1.5pt, alertred}
+]
+  \node[box] (a) at (0, 2) {\textbf{Módulo A}\\[2pt]\scriptsize Servicio Pedidos};
+  \node[box] (b) at (3.5, -0.5) {\textbf{Módulo B}\\[2pt]\scriptsize Servicio Clientes};
+  \node[box] (c) at (-3.5, -0.5) {\textbf{Módulo C}\\[2pt]\scriptsize Servicio Descuentos};
+
+  \draw[arrow] (a.east) -| (b.north);
+  \draw[arrow] (b.south) |- (c.south);
+  \draw[arrow] (c.north) |- (a.west);
+  
+  \node at (0, 0.4) [text width=4.5cm, align=center] {\textcolor{alertred}{\bfseries ¡Ciclo Infinito!}\\ \scriptsize Efecto dominó (\emph{Ripple Effect})\\ Imposible compilar/testear en aislamiento};
+\end{tikzpicture}
+\caption{Dependencia circular entre tres subsistemas.}
+\label{fig:dependencia-circular}
+\end{figure}
+
+\textbf{¿Por qué las dependencias circulares son destructivas?}
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Fusión forzada de módulos:} Aunque estén en paquetes o repositorios distintos, los componentes acoplados circularmente ya no son módulos independientes; forman un único bloque monolítico indivisible.
+  \item \textbf{Efecto Onda (\emph{Ripple Effect}):} Cualquier modificación en una interfaz de $A$ obliga a recomprobar y recompilar $B$ y $C$, generando un ciclo de retroalimentación infinita de cambios.
+  \item \textbf{Paradojas de Inicialización:} En tiempo de ejecución, el contenedor o el runtime no sabe qué objeto inicializar primero, provocando bloqueos mutuos (\emph{deadlocks}) o referencias a memoria nula (\emph{NullPointerExceptions}).
+  \item \textbf{Imposibilidad de pruebas unitarias aisladas:} No se puede probar $A$ sin arrastrar el entorno entero de $B$ y $C$.
+\end{enumerate}
+
+\begin{definicion}{Principio de Dependencias Acíclicas (Acyclic Dependencies Principle - ADP)}
+El grafo de dependencias entre componentes, módulos o paquetes de un sistema debe ser estrictamente un \textbf{Grafo Acíclico Dirigido (DAG)}. No se permiten ciclos en la estructura de dependencias de la arquitectura.
+\end{definicion}
+
+\textbf{¿Cómo romper un ciclo de dependencias circular?} Existen dos estrategias fundamentales de ingeniería:
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Estrategia 1: Inversión de Dependencias (DIP):} Si $C$ depende de $A$, introducimos una interfaz $I$ en el módulo $C$ que define el comportamiento requerido. Hacemos que $A$ implemente la interfaz $I$. De esta forma, la flecha de dependencia se invierte y el ciclo se destruye.
+  \item \textbf{Estrategia 2: Extracción a un Módulo Común:} Si $A$ y $B$ dependen mutuamente porque ambos usan un tipo de dato o entidad compartida, se extrae esa entidad a un nuevo módulo inferior $D$ del que ambos dependen en un único sentido ($A \to D$ y $B \to D$).
+\end{itemize}
+
+% ==============================================================================
+% SECCIÓN 4: DIP, IOC Y DEPENDENCY INJECTION
+% ==============================================================================
+\section{Inversión de Dependencias (DIP), Inversión de Control (IoC) e Inyección de Dependencias (DI)}
+\label{sec:dip-ioc-di}
+
+Pocas áreas causan tanta confusión entre profesionales y estudiantes como las siglas \textbf{DIP}, \textbf{IoC} y \textbf{DI}. Aclararemos de forma incontrovertible qué significa cada término, a qué nivel de la ingeniería aplica y cómo se relacionan entre sí.
+
+\begin{definicion}{Desambiguación Conceptual Definitiva}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Inversion of Control (IoC):} Es un \textbf{principio arquitectónico general}. Se refiere al cambio en la dirección habitual del flujo de control en un sistema: el marco de trabajo (\emph{framework}) toma el control y orquesta la ejecución llamando al código de la aplicación.
+  \item \textbf{Dependency Inversion Principle (DIP):} Es un \textbf{principio de diseño de software orientado a objetos} (la 'D' de los principios SOLID). Dictamina que los módulos de negocio de alto nivel no deben depender de los detalles técnicos de bajo nivel, sino de abstracciones.
+  \item \textbf{Dependency Injection (DI):} Es un \textbf{patrón de diseño de software y técnica de implementación}. Es el mecanismo concreto mediante el cual un objeto recibe sus dependencias externas desde una entidad inyectora en lugar de instanciarlas él mismo. Es la forma más habitual de materializar DIP e IoC.
+\end{itemize}
+\end{definicion}
+
+\subsection{El Principio de Inversión de Dependencias (DIP)}
+
+Enunciado por Robert C. Martin (``Uncle Bob'') en 1996, el principio establece dos leyes formales:
+
+\begin{definicion}{Leyes Formales de DIP}
+\begin{enumerate}
+  \item \textbf{Los módulos de alto nivel no deben depender de los módulos de bajo nivel. Ambos deben depender de abstracciones (interfaces o clases abstractas).}
+  \item \textbf{Las abstracciones no deben depender de los detalles. Los detalles (las implementaciones concretas) deben depender de las abstracciones.}
+\end{enumerate}
+\end{definicion}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  boxOld/.style={rectangle, draw=alertred, fill=alertred!10, thick, rounded corners=2mm, minimum width=3cm, minimum height=0.8cm, align=center},
+  boxNew/.style={rectangle, draw=primary, fill=primary!10, thick, rounded corners=2mm, minimum width=3cm, minimum height=0.8cm, align=center},
+  iface/.style={rectangle, draw=secondary, fill=bglight, thick, dashed, rounded corners=2mm, minimum width=3.2cm, minimum height=0.8cm, align=center},
+  arrow/.style={-{Stealth[scale=1.1]}, thick}
+]
+  % Arquitectura Tradicional Acoplada
+  \node[boxOld] (pOld) at (-4, 3) {\textbf{Policy Layer}\\ \scriptsize (Reglas de Alto Nivel)};
+  \node[boxOld] (mOld) at (-4, 1.5) {\textbf{Mechanism Layer}\\ \scriptsize (Lógica Media)};
+  \node[boxOld] (uOld) at (-4, 0) {\textbf{Utility Layer}\\ \scriptsize (Driver DB / Red)};
+
+  \draw[arrow, alertred] (pOld) -- (mOld);
+  \draw[arrow, alertred] (mOld) -- (uOld);
+  \node[above] at (-4, 3.6) {\textcolor{alertred}{\textbf{Tradicional: Dependencia Directa}}};
+  \node[below] at (-4, -0.6) {\scriptsize \textcolor{alertred}{Si cambia la utilidad, se rompe la política}};
+
+  % Arquitectura con Inversión de Dependencias
+  \node[boxNew] (pNew) at (3.5, 3) {\textbf{Policy Layer}\\ \scriptsize (Reglas de Alto Nivel)};
+  \node[iface] (iPol) at (3.5, 1.5) {\textbf{$\ll$Interface$\gg$}\\ \scriptsize Policy Service Interface};
+  \node[boxNew] (mNew) at (3.5, 0) {\textbf{Mechanism Layer}\\ \scriptsize (Implementación)};
+
+  \draw[arrow, color=secondary] (pNew) -- (iPol);
+  \draw[{Stealth[scale=1.1, open]}-, thick, color=secondary] (iPol) -- (mNew);
+
+  \node[iface] (iMech) at (3.5, -1.5) {\textbf{$\ll$Interface$\gg$}\\ \scriptsize Mechanism Service Interface};
+  \node[boxNew] (uNew) at (3.5, -3) {\textbf{Utility Layer}\\ \scriptsize (Implementación concreta)};
+
+  \draw[arrow, color=secondary] (mNew) -- (iMech);
+  \draw[{Stealth[scale=1.1, open]}-, thick, color=secondary] (iMech) -- (uNew);
+
+  \node[above] at (3.5, 3.6) {\textcolor{primary}{\textbf{Inversión de Dependencias (DIP)}}};
+  \node[below] at (3.5, -3.6) {\scriptsize \textcolor{primary}{Las flechas de dependencia se invierten hacia la abstracción}};
+\end{tikzpicture}
+\caption{Comparativa: flujo de dependencias sin DIP frente a inversión mediante interfaces.}
+\label{fig:dip-layers}
+\end{figure}
+
+\begin{importante}{¿Por qué se llama ``Inversión''?}
+En el diseño tradicional procedural, el flujo de control y las dependencias de código fuente viajan en la misma dirección: la función principal llama a la subrutina y el archivo fuente incluye directamente el archivo de la subrutina.
+Con DIP, \textbf{el flujo de dependencias de código fuente viaja en sentido contrario al flujo de control}:
+\begin{itemize}
+  \item En tiempo de ejecución (\emph{Control Flow}): La capa de negocio invoca la operación y el código de bajo nivel la ejecuta.
+  \item En el código fuente (\emph{Dependency Flow}): El módulo de bajo nivel importa y depende de la interfaz definida por el módulo de alto nivel.
+\end{itemize}
+\end{importante}
+
+\subsection{Caso Práctico de Código: Violación y Corrección de DIP}
+
+Analicemos un caso habitual de una aplicación web: un servicio de autenticación (\texttt{AuthService}) que autentica a un usuario y le envía un correo electrónico.
+
+\subsubsection{Caso Incorrecto: Violación flagrante de DIP}
+
+\begin{lstlisting}[language=javascript, caption={Código acoplado directamente a implementaciones concretas (Sin DIP)}]
+// Clase de infraestructura concreta (Bajo nivel)
+class MongoDBUserRepository {
+  getUser(email) {
+    // Consulta directa a coleccion nativa de MongoDB
+    return db.collection("users").findOne({ email: email });
+  }
+}
+
+// Clase de infraestructura concreta (Bajo nivel)
+class GmailMailerService {
+  sendLoginEmail(email) {
+    // Llamada directa a la API HTTP propietaria de Google Gmail
+    console.log("Enviando correo mediante API propietaria de Gmail a " + email);
+  }
+}
+
+// Modulo de Negocio (Alto nivel)
+class AuthenticationService {
+  constructor() {
+    // ERROR ARQUITECTONICO: La clase de alto nivel crea y se acopla rígidamente
+    // a implementaciones concretas de bajo nivel.
+    this.repository = new MongoDBUserRepository();
+    this.mailer = new GmailMailerService();
+  }
+
+  login(email) {
+    const user = this.repository.getUser(email);
+    if (user) {
+      this.mailer.sendLoginEmail(email);
+      return true;
+    }
+    return false;
+  }
+}
+\end{lstlisting}
+
+\textbf{Problemas graves de este diseño:}
+\begin{enumerate}[leftmargin=1.5em]
+  \item Si mañana la empresa decide migrar de MongoDB a PostgreSQL o DynamoDB, hay que modificar el código fuente de \texttt{AuthenticationService}.
+  \item Si Gmail cambia sus credenciales por SendGrid o Amazon SES, hay que reescribir \texttt{AuthenticationService}.
+  \item \textbf{Es imposible testear en aislamiento:} No se puede ejecutar una prueba unitaria rápida de \texttt{login()} sin levantar una base de datos MongoDB real y sin mandar correos electrónicos auténticos por Gmail.
+\end{enumerate}
+
+\subsubsection{Caso Correcto: Aplicando DIP con Interfaces y Desacoplamiento}
+
+Refactoricemos introduciendo abstracciones:
+
+\begin{lstlisting}[language=javascript, caption={Código desacoplado que cumple rigurosamente con DIP}]
+// 1. DEFINICION DE ABSTRACCIONES (CONTRATOS)
+// En TypeScript / Java / C# serian interfaces estrictas:
+// interface UserRepository { findByEmail(email: string): User | null; }
+// interface MailService { sendEmail(to: string, message: string): void; }
+
+// 2. MODULO DE ALTO NIVEL (REGLAS DE NEGOCIO PURAS)
+class AuthenticationService {
+  // El modulo de negocio depende unicamente de abstracciones.
+  // No sabe si los datos vienen de Mongo, Postgres, memoria o un archivo.
+  constructor(userRepository, mailService) {
+    this.userRepository = userRepository;
+    this.mailService = mailService;
+  }
+
+  login(email) {
+    const user = this.userRepository.findByEmail(email);
+    if (user) {
+      this.mailService.sendEmail(email, "Ha iniciado sesion con exito");
+      return true;
+    }
+    return false;
+  }
+}
+
+// 3. IMPLEMENTACIONES CONCRETAS DE BAJO NIVEL (ADAPTADORES)
+class MongoDBUserRepository /* implements UserRepository */ {
+  findByEmail(email) {
+    // Logica especifica de MongoDB
+    return db.collection("users").findOne({ email });
+  }
+}
+
+class SendGridMailService /* implements MailService */ {
+  sendEmail(to, message) {
+    // Integracion con la API de SendGrid
+    console.log(`[SendGrid] Mensaje enviado a ${to}: ${message}`);
+  }
+}
+\end{lstlisting}
+
+\subsection{Inversión de Control (IoC) y el Principio de Hollywood}
+
+\begin{definicion}{Principio de Hollywood}
+\emph{``Don't call us, we'll call you''} (No nos llames tú a nosotros; nosotros te llamaremos a ti).
+\end{definicion}
+
+En la programación tradicional con librerías, el código del desarrollador es el que tiene la iniciativa: el programa arranca en la función \texttt{main()}, procesa datos y llama a los métodos de la librería cuando los necesita. La librería es un actor pasivo.
+
+En la **Inversión de Control**, se invierte la iniciativa: el framework o el contenedor es el dueño del bucle de ejecución principal. El desarrollador escribe pequeñas piezas de lógica (controladores, manejadores de eventos, plugins) y las registra en el framework. Es el framework el que, ante un estímulo externo (un clic del ratón, un paquete de red o una petición HTTP entrante), decide cuándo invocar al código del desarrollador.
+
+\begin{ejemplo}{La Inversión de Control en Sistemas Operativos y GUIs}
+Pensemos en el sistema de ventanas de Windows o en el DOM del navegador:
+\begin{itemize}[leftmargin=1.5em]
+  \item En lugar de que el programa de un estudiante ejecute un bucle infinito consultando activamente: \texttt{while(true) \{ if(raton\_pulsado()) ... \}} (sondeo activo o \emph{polling}, que saturaría la CPU al 100\%).
+  \item El sistema operativo Windows gestiona el bucle de mensajes del sistema (\emph{Message Loop}). Nosotros únicamente implementamos un manejador (\emph{event handler}) de \texttt{OnClick}. Cuando el usuario mueve el ratón o pulsa un botón, Windows intercepta la interrupción hardware y es el sistema operativo quien invoca nuestro manejador de eventos. ¡Eso es pura Inversión de Control!
+\end{itemize}
+\end{ejemplo}
+
+\subsection{Inyección de Dependencias (DI): Mecanismos y Roles}
+
+La \textbf{Inyección de Dependencias} es el patrón técnico que materializa IoC para la provisión de dependencias colaboradoras entre objetos. 
+
+En lugar de que un componente $A$ construya internamente un objeto $B$ con el operador \texttt{new}, un agente externo especializado (\textbf{el Inyector}) crea $B$ y se lo ``entrega'' a $A$.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  boxClient/.style={rectangle, draw=primary, fill=primary!20, thick, rounded corners=2mm, minimum width=2.6cm, minimum height=1.1cm, align=center},
+  boxService/.style={rectangle, draw=alertgreen, fill=alertgreen!20, thick, rounded corners=2mm, minimum width=2.6cm, minimum height=1.1cm, align=center},
+  boxInjector/.style={rectangle, draw=kwpurple, fill=kwpurple!20, thick, rounded corners=2mm, minimum width=3.2cm, minimum height=1.1cm, align=center},
+  arrow/.style={-{Stealth[scale=1.1]}, thick}
+]
+  \node[boxClient] (client) at (-3.5, 2) {\textbf{Cliente (\emph{Client})}\\[2pt]\scriptsize Usa el servicio via interfaz};
+  \node[boxService] (service) at (3.5, 2) {\textbf{Servicio (\emph{Service})}\\[2pt]\scriptsize Implementa la funcionalidad};
+  \node[boxInjector] (injector) at (0, -0.5) {\textbf{Inyector (\emph{Injector})}\\[2pt]\scriptsize Ensambla y resuelve grafo};
+
+  \draw[arrow, line width=1.5pt, color=primary] (client.east) -- (service.west) node[midway, above] {\scriptsize Invoca métodos};
+  \draw[arrow, dashed, line width=1.2pt, color=kwpurple] (injector.north west) -- (client.south) node[midway, left] {\scriptsize Inyecta servicio};
+  \draw[arrow, dashed, line width=1.2pt, color=kwpurple] (injector.north east) -- (service.south) node[midway, right] {\scriptsize Crea instancia};
+\end{tikzpicture}
+\caption{La tríada de Dependency Injection: Cliente, Servicio e Inyector.}
+\label{fig:di-roles}
+\end{figure}
+
+En cualquier diseño con DI intervienen de forma nítida tres roles:
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Cliente (\emph{Client}):} La clase que requiere uno o más servicios para realizar su cometido (ej., \texttt{AuthenticationService}). El cliente no conoce la clase concreta del servicio; solo conoce su contrato/interfaz.
+  \item \textbf{Servicio (\emph{Service}):} La clase concreta que implementa el contrato (ej., \texttt{MongoDBUserRepository}).
+  \item \textbf{Inyector (\emph{Injector / IoC Container}):} El componente (como el contenedor de Spring, NestJS o un inicializador manual) responsable de instanciar el servicio y pasárselo al cliente.
+\end{enumerate}
+
+\subsection{Modalidades de Inyección de Dependencias}
+
+Existen tres formas estándar en las que el inyector puede entregar la dependencia al cliente:
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Inyección por Constructor (\emph{Constructor Injection}):}\\
+  Las dependencias se declaran como parámetros obligatorios del constructor de la clase.
+  \begin{lstlisting}[language=javascript]
+  class OrderService {
+    constructor(paymentGateway, inventoryService) {
+      this.paymentGateway = paymentGateway;
+      this.inventoryService = inventoryService;
+    }
+  }
+  \end{lstlisting}
+  \textbf{Evaluación:} Es la \textbf{opción unánimemente recomendada por la industria}, ya que garantiza que el objeto nunca pueda existir en un estado inconsistente o parcialmente inicializado, fomenta la inmutabilidad (\texttt{final / readonly}) y hace inmediatamente visibles las dependencias de la clase.
+
+  \item \textbf{Inyección por Métodos Modificadores (\emph{Setter / Property Injection}):}\\
+  Las dependencias se suministran a través de métodos setter después de que el objeto ha sido construido.
+  \begin{lstlisting}[language=javascript]
+  class OrderService {
+    setPaymentGateway(paymentGateway) {
+      this.paymentGateway = paymentGateway;
+    }
+  }
+  \end{lstlisting}
+  \textbf{Evaluación:} Solo debe emplearse para dependencias verdaderamente \textbf{opcionales} o valores de configuración por defecto que pueden reconfigurarse en caliente. Su riesgo es que la clase puede llamarse antes de invocar al setter, arrojando excepciones en tiempo de ejecución.
+
+  \item \textbf{Inyección por Parámetro de Método (\emph{Method / Interface Injection}):}\\
+  La dependencia no se almacena como atributo de la clase, sino que se suministra únicamente como parámetro al método particular que la necesita para una operación puntual.
+\end{enumerate}
+
+\subsection{Impacto Decisivo en la Testeabilidad: Dobles de Prueba}
+
+El mayor beneficio de ingeniería que aporta la combinación DIP + DI no es estético: es la \textbf{testeabilidad radical del sistema}.
+
+Cuando un componente crea sus propias dependencias con \texttt{new}, es imposible probarlo sin conectarse a la infraestructura real. Cuando las dependencias se inyectan a través de interfaces, en las pruebas unitarias podemos sustituir las dependencias reales pesadas por \textbf{Dobles de Prueba (\emph{Test Doubles})}:
+
+\begin{lstlisting}[language=javascript, caption={Prueba Unitaria ultrarrápida en memoria gracias a DIP y DI}]
+// En un fichero de test unitario (sin tocar base de datos ni red):
+describe("AuthenticationService Test Suite", () => {
+  it("debe retornar true y enviar email cuando las credenciales son validas", () => {
+    // 1. Creamos un Mock/Stub en memoria del repositorio
+    const mockRepo = {
+      findByEmail: (email) => ({ id: 42, email: "test@urjc.es" })
+    };
+
+    // 2. Creamos un Mock espía del servicio de correo
+    let emailEnviado = false;
+    const mockMailer = {
+      sendEmail: (to, msg) => { emailEnviado = true; }
+    };
+
+    // 3. Inyectamos los dobles de prueba en el servicio a testear
+    const authService = new AuthenticationService(mockRepo, mockMailer);
+
+    // 4. Ejecutamos la logica de negocio
+    const result = authService.login("test@urjc.es");
+
+    // 5. Aseveraciones matematicamente deterministicas en < 1 milisegundo
+    expect(result).toBe(true);
+    expect(emailEnviado).toBe(true);
+  });
+});
+\end{lstlisting}
+
+% ==============================================================================
+% SECCIÓN 5: EJERCICIOS RESUELTOS Y CASOS PRÁCTICOS DE EXAMEN
+% ==============================================================================
+\section{Ejercicios Resueltos y Casos Prácticos de Ingeniería}
+\label{sec:ejercicios-resueltos}
+
+Para afianzar de forma definitiva los conocimientos y garantizar la máxima calificación en exámenes teóricos y pruebas de diseño técnico en empresas punteras, analizaremos tres casos prácticos exhaustivos.
+
+\begin{ejercicioresuelto}{Formalización de Arquitectura según la Fórmula de Perry \& Wolf}
+\textbf{Enunciado:}\\
+Una empresa de telemedicina desea diseñar una plataforma en la nube para monitorizar signos vitales de pacientes ingresados en hospitales mediante pulseras IoT. Los sensores transmiten cada segundo datos de frecuencia cardíaca y saturación de oxígeno por protocolo MQTT. Un broker ingiere los mensajes, un servicio procesador detecta anomalías cardíacas y, si hay emergencia, dispara una alerta inmediata a una aplicación móvil de médicos de guardia vía notificaciones Push (WebSockets/APNs) y almacena el registro histórico en una base de datos Time-Series.
+
+\textbf{Tarea del Ingeniero:}\\
+Especifique formalmente la arquitectura software de este sistema de acuerdo con la definición canónica de Perry \& Wolf: $\mathbf{AS} = \{\text{Componentes}, \text{Forma}, \text{Lógica}\}$.
+
+\vspace{0.5em}
+\textbf{Solución Razonada:}
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Componentes ($C$):}
+    \begin{itemize}
+      \item \emph{Elementos de Datos ($C_D$):} MedicionSignoVitalDTO, AlertaCriticaEvent, HistoricoPacienteRecord.
+      \item \emph{Elementos de Procesamiento ($C_P$):} IngestionService, AnomalyDetectionEngine, AlertNotificationManager, TimeSeriesPersistenceWorker.
+      \item \emph{Elementos de Conexión ($C_C$):} Broker MQTT (EMQX/Mosquitto), Bus de Eventos interno (Kafka/RabbitMQ), Pasarela Push (Apple APNs / Google FCM), Driver de base de datos TimeSeries (InfluxDB/Timescale).
+    \end{itemize}
+
+  \item \textbf{Forma ($F$):}
+    \begin{itemize}
+      \item \emph{Restricciones Topológicas:} Estilo Arquitectónico Orientado a Eventos (\emph{Event-Driven}).
+      \item Los dispositivos IoT solo tienen visibilidad del puerto de entrada del Broker MQTT mediante canal cifrado TLS 1.3 con autenticación mutua (mTLS).
+      \item El \emph{AnomalyDetectionEngine} se suscribe al canal de telemetría y procesa las mediciones en streaming. No accede a la base de datos histórica para evitar latencias de I/O.
+      \item Si se detecta una anomalía ($\text{HR} > 150 \text{ bpm}$ o $\text{SpO}_2 < 90\%$), publica un evento \emph{AlertaCriticaEvent} al bus de eventos. El \emph{AlertNotificationManager} consume de dicho bus y abre canal directo WebSocket con el terminal del médico.
+    \end{itemize}
+
+  \item \textbf{Lógica / Rationale ($L$):}
+    \begin{itemize}
+      \item \emph{¿Por qué MQTT en lugar de HTTP REST?} Debido a la restricción de bajo consumo energético y escaso ancho de banda de las pulseras IoT embebidas; el protocolo binario ligero de MQTT minimiza la sobrecarga de cabeceras.
+      \item \emph{¿Por qué una base de datos Time-Series?} Para optimizar la tasa de escritura masiva (miles de muestras por segundo) y permitir agregaciones y descarte automático de métricas antiguas (\emph{retention policies}).
+      \item \emph{¿Por qué desacoplamiento mediante Bus de Eventos?} Para garantizar que una caída temporal en el almacenamiento histórico no interrumpa ni retrase la entrega en tiempo real de alertas que salvan vidas (disponibilidad y tolerancia a fallos desacopladas).
+    \end{itemize}
+\end{enumerate}
+\end{ejercicioresuelto}
+
+\begin{ejercicioresuelto}{Detección y Refactorización de Violación de DIP y Ciclo de Dependencias}
+\textbf{Enunciado:}\\
+Se presenta el siguiente diagrama y fragmento de código de un sistema de comercio electrónico en el que participan tres subsistemas: \texttt{OrderService}, \texttt{InvoiceService} y \texttt{PdfGenerator}:
+
+\begin{lstlisting}[language=javascript]
+// En modulo de Facturas:
+class InvoiceService {
+  constructor() {
+    this.pdf = new PdfGenerator();
+  }
+  generateInvoice(order) {
+    // Genera factura para el pedido
+    const doc = this.pdf.buildPdf(order);
+    return doc;
+  }
+}
+
+// En modulo de Generacion PDF:
+class PdfGenerator {
+  buildPdf(order) {
+    // Para formatear, el generador de PDF vuelve a llamar a OrderService
+    const orderService = new OrderService();
+    const customerInfo = orderService.lookupCustomer(order.id);
+    return "PDF_CONTENT with " + customerInfo;
+  }
+}
+
+// En modulo de Pedidos:
+class OrderService {
+  constructor() {
+    this.invoiceService = new InvoiceService();
+  }
+  checkout(order) {
+    // Guarda el pedido y emite factura
+    return this.invoiceService.generateInvoice(order);
+  }
+  lookupCustomer(orderId) {
+    return "Cliente URJC";
+  }
+}
+\end{lstlisting}
+
+\textbf{Cuestiones a resolver:}
+\begin{enumerate}
+  \item Identifique y justifique todas las violaciones a los principios de diseño presentes.
+  \item Dibuje el grafo de dependencias original demostrando el ciclo.
+  \item Proponga el diseño refactorizado aplicando DIP e Inyección de Dependencias, eliminando por completo el ciclo.
+\end{enumerate}
+
+\vspace{0.5em}
+\textbf{Solución Razonada:}
+
+\textbf{1. Violaciones identificadas:}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Violación flagrante del ADP (Acyclic Dependencies Principle):} Existe una dependencia circular cerrada:
+  $$\text{OrderService} \longrightarrow \text{InvoiceService} \longrightarrow \text{PdfGenerator} \longrightarrow \text{OrderService}$$
+  \item \textbf{Violación del Principio de Inversión de Dependencias (DIP):} Cada clase instancia directamente a sus colaboradoras mediante \texttt{new}, acoplándose a implementaciones concretas en vez de abstracciones.
+  \item \textbf{Violación de Separation of Concerns (SoC) e Information Hiding:} El componente de bajo nivel utilitario (\texttt{PdfGenerator}) conoce detalles del dominio de pedidos (\texttt{OrderService}).
+\end{itemize}
+
+\textbf{2. Refactorización Arquitectónica:}
+Para romper el ciclo de dependencias y aplicar DIP:
+\begin{enumerate}[leftmargin=1.5em]
+  \item El \texttt{PdfGenerator} debe ser un componente utilitario puro. No debe conocer qué es un pedido ni llamar a ningún servicio de negocio; solo debe recibir una estructura de datos abstracta (\texttt{DocumentTemplate} o un mapa de datos a renderizar).
+  \item Se define una interfaz \texttt{IInvoiceService} en el paquete de pedidos o una abstracción compartida.
+  \item Las dependencias se inyectan a través de los constructores.
+\end{enumerate}
+
+\begin{lstlisting}[language=javascript, caption={Código refactorizado limpio y sin ciclos}]
+// 1. Modulo utilitario puro de PDF (Sin dependencias externas)
+class PdfGenerator {
+  renderDocument(title, metadata, content) {
+    return `PDF [${title}]: ${JSON.stringify(content)}`;
+  }
+}
+
+// 2. Modulo de Facturas (Depende unicamente del generador utilitario)
+class InvoiceService {
+  constructor(documentRenderer) {
+    this.renderer = documentRenderer;
+  }
+  generateInvoice(invoiceDto) {
+    return this.renderer.renderDocument("FACTURA", {}, invoiceDto);
+  }
+}
+
+// 3. Modulo de Pedidos (Nivel de aplicacion - orquesta el flujo)
+class OrderService {
+  constructor(invoiceService) {
+    this.invoiceService = invoiceService;
+  }
+  checkout(order) {
+    const customer = this.lookupCustomer(order.id);
+    const invoiceDto = {
+      orderId: order.id,
+      customer: customer,
+      total: order.amount
+    };
+    return this.invoiceService.generateInvoice(invoiceDto);
+  }
+  lookupCustomer(orderId) {
+    return "Cliente URJC";
+  }
+}
+\end{lstlisting}
+El nuevo grafo es estrictamente acíclico: $\text{OrderService} \longrightarrow \text{InvoiceService} \longrightarrow \text{PdfGenerator}$. Las dependencias fluyen en un único sentido sin retorno.
+\end{ejercicioresuelto}
+
+\begin{ejercicioresuelto}{Evaluación Métrica de Cohesión y Acoplamiento}
+\textbf{Enunciado:}\\
+Un equipo de desarrollo presenta dos alternativas para estructurar un módulo de comercio electrónico:
+\begin{itemize}
+  \item \textbf{Diseño A:} Una única clase \texttt{ShopManager} que agrupa 25 métodos: cálculo de precios, conexión a base de datos Oracle, envío de emails mediante SMTP, parseo de ficheros XML de proveedores y renderizado de páginas HTML.
+  \item \textbf{Diseño B:} Cuatro clases especializadas (\texttt{PricingEngine}, \texttt{OrderRepository}, \texttt{EmailNotificationService}, \texttt{CatalogImportService}) que se comunican mediante interfaces y DTOs bien definidos.
+\end{itemize}
+Compare cuantitativa y cualitativamente ambos diseños analizando acoplamiento, cohesión, coste de cambio y testeabilidad.
+
+\vspace{0.5em}
+\textbf{Solución Razonada:}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l X X}
+\toprule
+\textbf{Dimensión de Análisis} & \textbf{Diseño A (God Class / Monolito)} & \textbf{Diseño B (Modular / Cohesivo)} \\
+\midrule
+\textbf{Nivel de Cohesión} & \textbf{Cohesión Coincidente/Lógica (Pésima).} Los métodos no comparten atributos; el índice LCOM es extremadamente elevado. & \textbf{Cohesión Funcional (Óptima).} Cada clase persigue un único objetivo atómico de negocio. \\
+\addlinespace
+\textbf{Nivel de Acoplamiento} & \textbf{Alto Acoplamiento de Contenido y Común.} Cualquier consumidor de la tienda depende directa o indirectamente de la base de datos y de la librería SMTP. & \textbf{Bajo Acoplamiento de Datos.} Comunicación mediante contratos e interfaces desacopladas. \\
+\addlinespace
+\textbf{Coste de Cambio (Mantenibilidad)} & \textbf{Altísimo.} Cambiar el driver de la base de datos o el proveedor de correo exige modificar y recompilar toda la clase \texttt{ShopManager}, arriesgando romper el cálculo de precios. & \textbf{Mínimo.} Los cambios en el sistema de correo quedan confinados en \texttt{EmailNotificationService} sin impacto colateral. \\
+\addlinespace
+\textbf{Testeabilidad Unitario} & \textbf{Nula o muy deficiente.} Requiere configurar Oracle y un servidor de correo para probar un descuento del 10\%. & \textbf{Excelente.} Se prueban las reglas de precio en microsegundos con dobles de prueba (Mocks). \\
+\bottomrule
+\end{tabularx}
+\caption{Comparativa rigurosa entre diseño anémico/god class y diseño modular.}
+\end{table}
+\end{ejercicioresuelto}
+
+% ==============================================================================
+% SECCIÓN 6: RESUMEN EJECUTIVO Y PREGUNTAS DE AUTOEVALUACIÓN
+% ==============================================================================
+\section{Resumen Ejecutivo y Preguntas de Autoevaluación}
+\label{sec:resumen-autoevaluacion}
+
+\begin{tcolorbox}[
+  enhanced,
+  colback=secondary!5!bglight,
+  colframe=secondary,
+  arc=3mm,
+  boxrule=1pt,
+  title={\bfseries\color{white} Resumen Sintético de Conceptos Clave},
+  coltitle=white
+]
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Arquitectura Software:} Representa el diseño al nivel más alto de abstracción. Se formaliza mediante la tripleta de Perry \& Wolf: $\mathbf{AS = \{\text{Componentes}, \text{Forma}, \text{Lógica}\}}$.
+  \item \textbf{Erosión vs.\ Mismatch:} El \emph{Architectural Mismatch} surge por asunciones implícitas incompatibles al integrar componentes; la \emph{Erosión Arquitectónica} es la degradación gradual de calidad por violar las directrices de diseño durante el mantenimiento.
+  \item \textbf{Modelo vs.\ Arquitectura de Referencia:} El modelo es una división funcional abstracta (e.g., compilador de $N$ fases o modelo OSI); la arquitectura de referencia asocia dicho modelo a componentes software concretos y protocolos (e.g., AUTOSAR en la automoción).
+  \item \textbf{Líneas de Producto (SPL):} Maximizan la reutilización compartiendo activos comunes (\emph{commonalities}) y gestionando la variabilidad (\emph{variability}) para derivar productos específicos.
+  \item \textbf{Cohesión y Acoplamiento:} Regla de oro del diseño: \textbf{Alta Cohesión interna} (elementos de un módulo trabajan juntos hacia un fin único) y \textbf{Bajo Acoplamiento externo} (dependencias mínimas y abstractas entre módulos).
+  \item \textbf{DIP vs.\ IoC vs.\ DI:}
+    \begin{itemize}
+      \item \textbf{IoC:} Principio arquitectónico general (Principio de Hollywood: el framework toma el control del flujo).
+      \item \textbf{DIP:} Principio de diseño OO: módulos de alto nivel y bajo nivel dependen de abstracciones.
+      \item \textbf{DI:} Patrón y mecanismo técnico: un inyector suministra los servicios al cliente (preferentemente por constructor), facilitando tests unitarios independientes con mocks.
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\subsection{Batería de Preguntas de Autoevaluación (Estilo Examen URJC)}
+
+\begin{enumerate}[leftmargin=1.8em]
+  \item \textbf{¿Por qué la ``lógica'' (\emph{rationale}) es un elemento indispensable en la definición de Perry y Wolf?} \\
+  \emph{Respuesta orientativa:} Porque documenta el porqué y las justificaciones técnicas de las decisiones de diseño tomadas frente a otras alternativas. Sin la lógica, los futuros ingenieros no pueden saber si una modificación en el sistema vulnerará los atributos de calidad originalmente requeridos.
+
+  \item \textbf{Explique la diferencia fundamental entre un Modelo de Referencia y una Arquitectura de Referencia, citando un ejemplo de cada uno.} \\
+  \emph{Respuesta orientativa:} El modelo de referencia define una partición funcional y flujos de datos abstractos sin ligarse a componentes software concretos (ejemplo: las 7 capas OSI o el esquema conceptual de un compilador). La arquitectura de referencia mapea ese modelo conceptual sobre componentes, conectores y estilos arquitectónicos reales (ejemplo: la arquitectura AUTOSAR para automoción).
+
+  \item \textbf{¿En qué consiste el fenómeno de la ``erosión arquitectónica'' y qué medidas preventivas puede implantar un equipo de ingeniería para evitarla?} \\
+  \emph{Respuesta orientativa:} Es la degradación paulatina de la calidad y de los límites del diseño software producida por cambios rápidos, parches y violaciones de encapsulamiento durante la fase de mantenimiento. Se previene automatizando pruebas unitarias de arquitectura en la integración continua con herramientas como ArchUnit o linters de dependencias modulares.
+
+  \item \textbf{¿Por qué el anti-patrón God Class conduce a un código difícilmente mantenible y cómo afecta a la cohesión?} \\
+  \emph{Respuesta orientativa:} Porque centraliza un número excesivo de responsabilidades no relacionadas, lo que desploma la cohesión funcional hacia niveles coincidentes o lógicos y dispara la complejidad ciclomática. Además, acopla fuertemente el sistema a dicha clase, impidiendo la realización de pruebas unitarias aisladas y provocando colisiones de código continuas entre desarrolladores.
+
+  \item \textbf{Demuestre cómo el Principio de Inversión de Dependencias (DIP) invierte el sentido de las flechas de dependencia del código fuente respecto al flujo de ejecución.} \\
+  \emph{Respuesta orientativa:} En tiempo de ejecución, el flujo de control se dirige desde el módulo de alto nivel (cliente) hacia el módulo de bajo nivel (servicio). Sin embargo, al introducir una interfaz que pertenece conceptualmente al módulo de alto nivel, el código fuente del módulo de bajo nivel debe importar e implementar dicha interfaz. Por tanto, la flecha de dependencia estática del código fuente apunta hacia el módulo de alto nivel (hacia la abstracción), invirtiéndose respecto al flujo de control.
+
+  \item \textbf{Compare las tres modalidades de Inyección de Dependencias (Constructor, Setter, Interfaz) y justifique por qué la inyección por constructor es la más recomendada en entornos profesionales.} \\
+  \emph{Respuesta orientativa:} La inyección por constructor exige que todas las dependencias requeridas se proporcionen en el instante de la instanciación. Esto impide que existan objetos en estados intermedios inconsistentes, previene errores de puntero nulo (\texttt{NullPointerException}), favorece la inmutabilidad de los campos (declarables como \texttt{final} o \texttt{readonly}) y expone de forma explícita el contrato del componente. La inyección por setter solo es aconsejable para dependencias puramente opcionales.
+\end{enumerate}
+
