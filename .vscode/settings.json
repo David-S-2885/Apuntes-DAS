@@ -1,0 +1,8 @@
+{
+  "latex-workshop.latex.rootFile.useMakefile": false,
+  "latex-workshop.latex.rootFile.doNotPrompt": true,
+  "latex-workshop.latex.search.rootFiles.include": [
+    "main.tex"
+  ]
+}
+

@@ -1,0 +1,732 @@
+% !TeX root = ../main.tex
+\chapter{Estilos Arquitectónicos, Patrones de Diseño y Modelado con UML y C4}
+\label{cap:tema2}
+
+\begin{tcolorbox}[
+  enhanced,
+  colback=primary!5!bglight,
+  colframe=primary,
+  arc=3mm,
+  boxrule=1pt,
+  title={\bfseries\color{white} Objetivos de Aprendizaje del Tema 2},
+  coltitle=white
+]
+Al finalizar este capítulo, el estudiante e ingeniero de software será capaz de:
+\begin{itemize}[leftmargin=1.5em]
+  \item Comprender y contrastar con rigor la \textbf{jerarquía de granularidad}: Estilos Arquitectónicos (macro-estructura) frente a Patrones de Diseño GoF (micro-estructura de clases) y su composición heterogénea en sistemas reales.
+  \item Dominar el catálogo de los principales \textbf{Estilos Arquitectónicos}: Tuberías y Filtros (\emph{Pipes \& Filters}), Arquitectura por Capas (\emph{Layers}), Cliente-Servidor, MVC, REST / RESTful (los 6 principios de Roy Fielding), Arquitecturas Dirigidas por Eventos (\emph{EDA}), Pizarra (\emph{Blackboard}) y Microservicios.
+  \item Diseñar y resolver problemas de alta concurrencia y consistencia en sistemas distribuidos mediante patrones avanzados de microservicios: \textbf{SAGA} (coreografía vs.\ orquestación y transacciones compensatorias), \textbf{CQRS}, \textbf{Circuit Breaker}, \textbf{API Gateway} y \textbf{Database-per-Service}.
+  \item Aplicar con solvencia el catálogo clásico de \textbf{Patrones de Diseño GoF}: Creacionales (\emph{Singleton, Builder, Factory Method, Abstract Factory, Prototype}), Estructurales (\emph{Adapter, Decorator, Facade, Proxy, Composite}) y de Comportamiento (\emph{Strategy, State, Observer, Publish-Subscribe, Mediator, Chain of Responsibility, Visitor, Parallel Split}).
+  \item Modelar arquitecturas de software complejas en \textbf{UML 2.5}: diagramas de paquetes con relaciones de dependencia e importación (\texttt{<<import>>}, \texttt{<<uses>>}), diagramas de clases, diagramas de componentes, diagramas de despliegue, máquinas de estados y secuencias.
+  \item Utilizar los mecanismos formales de extensión de UML: estereotipos (\texttt{<<stereotype>>}), valores etiquetados, restricciones en \textbf{OCL} y perfiles especializados (\textbf{SysML} y \textbf{MARTE}).
+  \item Dominar la \textbf{Notación C4} de Simon Brown: Contexto del Sistema, Contenedores, Componentes y Código, evaluando sus ventajas comunicativas y complementariedad frente a UML.
+\end{itemize}
+\end{tcolorbox}
+
+\vspace{1em}
+
+% ==============================================================================
+% SECCIÓN 1: ESTILOS VS PATRONES
+% ==============================================================================
+\section{Estilos Arquitectónicos frente a Patrones de Diseño: Granularidad e Historia}
+\label{sec:estilos-vs-patrones}
+
+\subsection{Diferenciación Conceptual y Niveles de Granularidad}
+
+En el diseño de sistemas software existe una jerarquía fundamental de abstracción. Aunque tanto los estilos como los patrones son \textbf{soluciones probadas y reutilizables a problemas recurrentes en un contexto determinado}, difieren radicalmente en su \textbf{alcance, granularidad y momento de decisión}.
+
+\begin{definicion}{Estilo Arquitectónico (\emph{Architectural Style})}
+Un \textbf{Estilo Arquitectónico} es un conjunto coordinado de decisiones de diseño que impone una \textbf{forma estructural y una organización de alto nivel} a un sistema software completo o a un subsistema principal. Define la familia de componentes permitidos, los tipos de conectores entre ellos, las restricciones topológicas de comunicación y los atributos de calidad fundamentales (rendimiento, escalabilidad, modificabilidad).
+\end{definicion}
+
+\begin{definicion}{Patrón de Diseño Software (\emph{Design Pattern})}
+Un \textbf{Patrón de Diseño} es una solución arquitectónica de \textbf{granularidad media-baja} orientada a resolver un problema específico de interacción, instanciación o composición dentro de un conjunto reducido de clases, interfaces y objetos colaboradores en el código fuente.
+\end{definicion}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l p{5.5cm} p{6.5cm}}
+\toprule
+\textbf{Criterio} & \textbf{Estilo Arquitectónico} & \textbf{Patrón de Diseño (GoF / Fowler)} \\
+\midrule
+\textbf{Nivel de Abstracción} & Nivel Macro (Sistema global / Subsistemas). & Nivel Micro / Medio (Clases, objetos, módulos locales). \\
+\addlinespace
+\textbf{Momento de Decisión} & Primeras fases de ingeniería (altísimo coste de cambio). & Durante la implementación y diseño detallado. \\
+\addlinespace
+\textbf{Entidades involucradas} & Servidores, capas, tuberías, procesos, bases de datos. & Clases, interfaces, funciones, llamadas a método. \\
+\addlinespace
+\textbf{Impacto Principal} & Atributos de calidad globales (escalabilidad, tolerancia a fallos). & Flexibilidad del código, mantenibilidad, testeabilidad local. \\
+\addlinespace
+\textbf{Ejemplos Representativos} & Microservicios, Pipes \& Filters, Event-Driven, REST. & Strategy, Factory Method, Observer, Adapter, Builder. \\
+\bottomrule
+\end{tabularx}
+\caption{Comparativa rigurosa: Estilos Arquitectónicos frente a Patrones de Diseño.}
+\label{tab:estilos-vs-patrones}
+\end{table}
+
+\begin{tradeoff}{Granularidad: Estilos vs.\ Patrones}
+En el ciclo de diseño, \textbf{primero se selecciona el estilo (o estilos) arquitectónicos} para estructurar las áreas funcionales del sistema. Si no existiera un estilo definido, la solución degeneraría en una masa caótica de clases desordenadas. Una vez fijados los estilos macro, se seleccionan los patrones de diseño para estructurar los componentes internos.
+\end{tradeoff}
+
+\begin{importante}{Heterogeneidad de las Arquitecturas del Mundo Real}
+Una arquitectura software en producción \textbf{nunca es puramente monogenérica}: es una composición heterogénea donde suele predominar un estilo macro, dentro del cual subsistemas concretos adoptan otros estilos secundarios y cientos de patrones de diseño locales. Por ejemplo, una plataforma bancaria puede adoptar un estilo general de \emph{Microservicios}, donde la comunicación externa sea \emph{RESTful}, la comunicación asíncrona entre servicios sea \emph{Event-Driven}, y el servicio de cálculo de riesgos emplee un estilo de \emph{Pipes \& Filters} codificado internamente con patrones \emph{Strategy} y \emph{Builder}.
+\end{importante}
+
+\subsection{Evolución Cronológica del Movimiento de Patrones}
+
+Para comprender la madurez de la disciplina es indispensable conocer sus hitos históricos:
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{1977--1979 (Christopher Alexander):} El arquitecto civil Christopher Alexander publica \emph{``A Pattern Language''} y \emph{``The Timeless Way of Building''}, acuñando la célebre definición: \emph{<<Cada patrón describe un problema que ocurre una y otra vez en nuestro entorno, para describir después el núcleo de la solución a dicho problema, de tal forma que dicha solución pueda usarse millones de veces sin hacer nunca lo mismo dos veces>>}.
+  \item \textbf{1987 (Ward Cunningham y Kent Beck):} Presentan en OOPSLA el primer lenguaje de patrones aplicado al diseño de interfaces de usuario en el lenguaje Smalltalk.
+  \item \textbf{1994--1995 (Gang of Four - GoF):} Erich Gamma, Richard Helm, Ralph Johnson y John Vlissides publican el libro más influyente en la historia del software orientado a objetos: \emph{``Design Patterns: Elements of Reusable Object-Oriented Software''}, catalogando 23 patrones clásicos clasificados en Creacionales, Estructurales y de Comportamiento.
+  \item \textbf{1996--2000 (Frank Buschmann et al. - POSA):} La serie \emph{``Pattern-Oriented Software Architecture''} introduce los patrones arquitectónicos de alto nivel (como Broker, Pipes and Filters, Blackboard).
+  \item \textbf{2002 (Martin Fowler):} Publica \emph{``Patterns of Enterprise Application Architecture''}, estableciendo las bases para capas de dominio, persistencia (Active Record, Data Mapper) y gestión de transacciones.
+  \item \textbf{2014--Presente:} Patrones distribuidos, Cloud-Native, microservicios (Chris Richardson) y los emergentes patrones de IA generativa (RAG, Agentes autónomos, Function Calling).
+\end{enumerate}
+
+% ==============================================================================
+% SECCIÓN 2: CATÁLOGO DE ESTILOS ARQUITECTÓNICOS
+% ==============================================================================
+\section{Catálogo Exhaustivo de Estilos Arquitectónicos}
+\label{sec:catalogo-estilos}
+
+\subsection{Tuberías y Filtros (\emph{Pipes and Filters})}
+
+El estilo de Tuberías y Filtros descompone el procesamiento de un flujo continuo de datos en una secuencia de etapas de transformación independientes.
+
+\begin{patronarquitectura}{Tuberías y Filtros (\emph{Pipes \& Filters})}
+\textbf{Problema:} Transformar incrementalmente flujos continuos de datos mediante etapas secuenciales independientes sin acoplar los pasos de computación entre sí.\\
+\textbf{Solución:}
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Filtro (\emph{Filter}):} Componente de caja negra que lee flujos de datos de entrada, transforma la información de manera incremental y emite flujos de salida. Comienza a producir datos antes de que termine de leer toda la entrada.
+  \item \textbf{Tubería (\emph{Pipe}):} Conector unidireccional que transporta el flujo de datos entre la salida de un filtro y la entrada del siguiente, gestionando la sincronización y la memoria intermedia.
+\end{itemize}
+\end{patronarquitectura}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  filter/.style={rectangle, draw=primary, fill=primary!20, thick, rounded corners=2mm, minimum width=2.4cm, minimum height=1.1cm, align=center},
+  pipe/.style={line width=2pt, color=secondary, -{Stealth[scale=1.2]}}
+]
+  \node at (-4.2, 0) [left] {\textbf{Stream In}};
+  \draw[pipe] (-4.2, 0) -- (-3, 0);
+  
+  \node[filter] (f1) at (-1.8, 0) {\textbf{Filtro 1}\\[2pt]\scriptsize Parseo JSON};
+  \draw[pipe] (f1.east) -- node[above] {\scriptsize Pipe} (0.3, 0);
+  
+  \node[filter] (f2) at (1.5, 0) {\textbf{Filtro 2}\\[2pt]\scriptsize Enriquecimiento};
+  \draw[pipe] (f2.east) -- node[above] {\scriptsize Pipe} (3.6, 0);
+  
+  \node[filter] (f3) at (4.8, 0) {\textbf{Filtro 3}\\[2pt]\scriptsize Cifrado AES};
+  \draw[pipe] (f3.east) -- (6.3, 0);
+  \node at (6.3, 0) [right] {\textbf{Stream Out}};
+\end{tikzpicture}
+\caption{Flujo secuencial del estilo Pipes and Filters.}
+\label{fig:pipe-filter}
+\end{figure}
+
+\begin{ejemplo}{Ejemplos en Sistemas Reales}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Tuberías en sistemas Unix/Linux:} El clásico encadenamiento de comandos de consola:
+  \begin{lstlisting}[language=bash]
+  ls -al | grep "fichero" > salida.txt
+  cat access.log | grep "500" | awk '{print $1}' | sort | uniq -c | sort -nr
+  \end{lstlisting}
+  \item \textbf{Pipelines de Procesamiento Multimedia:} Compresión de vídeo en FFmpeg o procesamiento de audio en tiempo real.
+  \item \textbf{ETL (Extract-Transform-Load) en Big Data:} Apache Spark Streaming o Apache Kafka Streams.
+\end{itemize}
+\end{ejemplo}
+
+\begin{tradeoff}{Pipes and Filters}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Ventajas:} Reusabilidad absoluta de filtros independientes, paralelismo natural (ejecución concurrente en múltiples núcleos), sencillez de pruebas unitarias.
+  \item \textbf{Desventajas:} Sobrecarga computacional por parseo, formateo y serialización continua de datos entre tuberías; pésimo para aplicaciones interactivas GUI.
+\end{itemize}
+\end{tradeoff}
+
+\subsection{Estilo por Capas (\emph{Layered Architecture})}
+
+Organiza el sistema en una jerarquía de niveles horizontales ordenados, donde cada capa soporta una API de servicios para que sea utilizada exclusivamente por la capa superior.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  layer/.style={rectangle, draw=primary, fill=bglight, thick, rounded corners=2mm, minimum width=9cm, minimum height=0.9cm, align=center},
+  arrow/.style={-{Stealth[scale=1.1]}, line width=1.3pt, color=secondary}
+]
+  \node[layer, fill=primary!15] (l1) at (0, 3) {\textbf{Capa de Presentación / Interfaz de Usuario}};
+  \node[layer, fill=secondary!15] (l2) at (0, 1.5) {\textbf{Capa de Lógica de Negocio / Dominio}};
+  \node[layer, fill=accent!20] (l3) at (0, 0) {\textbf{Capa de Middleware / Acceso a Datos}};
+  \node[layer, fill=textdark!20] (l4) at (0, -1.5) {\textbf{Capa de Infraestructura / Nivel Físico}};
+
+  \draw[arrow] (l1.south) -- (l2.north);
+  \draw[arrow] (l2.south) -- (l3.north);
+  \draw[arrow] (l3.south) -- (l4.north);
+
+  \draw[-{Stealth}, line width=1.5pt, alertred, dashed] (l1.east) to[bend left=45] node[midway, right] {\textcolor{alertred}{\textbf{¡Violación de Capas!}}} (l3.east);
+\end{tikzpicture}
+\caption{Arquitectura en capas estricta frente a atajos ilegítimos que violan el diseño.}
+\label{fig:layers}
+\end{figure}
+
+\begin{importante}{Reglas de Diseño en Capas}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Capas Estrictas (\emph{Strict Layers}):} La capa $N$ sólo invoca a la capa inmediatamente inferior $N-1$.
+  \item \textbf{Capas Horizontales y Verticales:} Además de capas horizontales apiladas, existen subsistemas transversales que proporcionan soporte a todas las capas (como la \textbf{Capa de Seguridad}, \textbf{Logging} o \textbf{Librerías compartidas}).
+  \item \textbf{Violación del Diseño entre Capas:} Ocurre cuando un elemento de la capa de interfaz llama directamente al middleware o a la base de datos sin pasar por la lógica de negocio, violando el encapsulamiento y eludiendo las reglas de validación y auditoría.
+\end{itemize}
+\end{importante}
+
+\subsection{Estilo Cliente-Servidor (\emph{Client-Server})}
+
+Modelo fundamental de Internet y redes distribuidas:
+\begin{itemize}[leftmargin=1.5em]
+  \item Los clientes acceden a datos y aplicaciones centralizadas en los servidores.
+  \item Arquitectura basada en peticiones y respuestas síncronas o asíncronas con eventos.
+  \item Evolución hacia arquitecturas cliente-servidor distribuidas (redes Peer-to-Peer).
+\end{itemize}
+
+\subsection{Modelo-Vista-Controlador (\emph{MVC})}
+
+Surgido en los años 80 para sistemas interactivos con interfaces gráficas, permite disponer de \textbf{diferentes vistas de los mismos datos} y habilita la interacción multimodal:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  box/.style={rectangle, draw=primary, fill=bglight, thick, rounded corners=3mm, minimum width=2.8cm, minimum height=1.1cm, align=center},
+  arrow/.style={-{Stealth[scale=1.1]}, line width=1.3pt, color=secondary}
+]
+  \node[box, fill=primary!20] (ctrl) at (0, 2.5) {\textbf{Controlador}\\[2pt]\scriptsize Procesa eventos e intenciones};
+  \node[box, fill=alertgreen!20] (model) at (-3.2, -0.5) {\textbf{Modelo}\\[2pt]\scriptsize Estado y reglas de negocio};
+  \node[box, fill=accent!25] (view) at (3.2, -0.5) {\textbf{Vista}\\[2pt]\scriptsize Presentación visual al usuario};
+
+  \node (user) at (0, 4.2) [draw=textdark, circle, fill=textdark!15] {\textbf{Usuario}};
+
+  \draw[arrow] (user) -- node[midway, right] {\scriptsize 1. Solicita / Interactúa} (ctrl);
+  \draw[arrow] (ctrl.west) -| node[midway, above] {\scriptsize 2. Invoca / Modifica} (model.north);
+  \draw[arrow] (ctrl.east) -| node[midway, above] {\scriptsize Procesa y envía} (view.north);
+  \draw[arrow] (model.east) -- node[midway, above] {\scriptsize Notifica cambios (Observer)} (view.west);
+  \draw[arrow] (view.north) |- node[midway, right] {\scriptsize 3. Entrega UI actualizada} (user);
+\end{tikzpicture}
+\caption{Ciclo de colaboración en el estilo Modelo-Vista-Controlador (MVC).}
+\label{fig:mvc}
+\end{figure}
+
+\begin{definicion}{Componentes del MVC}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Modelo (\emph{Model}):} Representa los datos del dominio, el estado y las reglas de negocio. Notifica a las vistas cuando su estado muta (habitualmente mediante el patrón \emph{Observer}).
+  \item \textbf{Vista (\emph{View}):} Renderiza los datos del modelo en un formato interactivo para el usuario (layout y lógica de presentación).
+  \item \textbf{Controlador (\emph{Controller}):} Intercepta las acciones del usuario y las traduce en comandos sobre el modelo.
+\end{itemize}
+\end{definicion}
+
+\subsection{El Estilo REST y Arquitecturas RESTful}
+
+En el año 2000, Roy Thomas Fielding presentó en su tesis doctoral la definición formal de \textbf{REST} (\emph{Representational State Transfer}) para formalizar el diseño arquitectónico de servicios web e Internet.
+
+\begin{principio}{Los 6 Principios Arquitectónicos de Roy Fielding para REST}
+Para que un sistema sea estrictamente \textbf{RESTful}, debe satisfacer seis restricciones:
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Cliente-Servidor (C/S):} Separación tajante entre interfaz de usuario y almacenamiento de datos.
+  \item \textbf{Sin Estado (\emph{Statelessness}):} Cada petición contiene todo el contexto necesario. El cliente almacena el estado de sesión; el servidor nunca retiene estado de cliente.
+  \item \textbf{Capacidad de Almacenamiento en Caché (\emph{Cacheability}):} Respuestas etiquetadas explícitamente para reutilización local o intermedia.
+  \item \textbf{Sistema en Capas (\emph{Layered System}):} Intermediarios transparentes (proxies, balanceadores, firewalls).
+  \item \textbf{Interfaz Uniforme (\emph{Uniform Interface}):} URIs estándar para recursos, manipulación vía representaciones (JSON/XML) y mensajes autodescriptivos.
+  \item \textbf{Código bajo demanda (\emph{Code on Demand} - Opcional):} Envío de scripts ejecutables (e.g., JavaScript) al cliente.
+\end{enumerate}
+\end{principio}
+
+\textbf{Atributos de Calidad que optimiza REST:}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Rendimiento (\emph{Performance}):} Minimizando latencias gracias al almacenamiento masivo en caché distribuida.
+  \item \textbf{Escalabilidad (\emph{Scalability}):} Dado que el servidor es \emph{stateless}, cualquier réplica puede atender cualquier petición.
+  \item \textbf{Simplicidad (\emph{Simplicity}):} Interfaz uniforme basada en URIs universales y verbos HTTP estándar.
+  \item \textbf{Modificabilidad (\emph{Modifiability}):} Evolución independiente de clientes y servidores.
+  \item \textbf{Fiabilidad (\emph{Reliability}):} Alta resistencia a caídas de nodos individuales.
+\end{itemize}
+
+\subsection{Arquitecturas Dirigidas por Eventos (\emph{Event-Driven Architecture - EDA})}
+
+En una arquitectura EDA, los componentes se comunican mediante la \textbf{detección, consumo y reacción a eventos}:
+
+\begin{definicion}{Evento de Software}
+Un \textbf{evento} es un registro inmutable que atestigua un cambio significativo en el estado de un sistema ocurrido en el pasado. Los emisores de eventos \textbf{no conocen a los consumidores}, asegurando un desacoplamiento temporal y espacial radical (\emph{loose coupling}).
+\end{definicion}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  producer/.style={rectangle, draw=primary, fill=primary!15, thick, rounded corners=2mm, minimum width=2.4cm, minimum height=1cm, align=center},
+  consumer/.style={rectangle, draw=alertgreen, fill=alertgreen!15, thick, rounded corners=2mm, minimum width=2.4cm, minimum height=1cm, align=center},
+  broker/.style={cylinder, draw=accent, fill=accent!20, shape border rotate=90, thick, minimum width=3.2cm, minimum height=1.6cm, align=center},
+  arrow/.style={-{Stealth[scale=1.1]}, line width=1.2pt}
+]
+  \node[producer] (p1) at (-4, 1.2) {\textbf{Productor 1}\\[2pt]\scriptsize Servicio Ventas};
+  \node[producer] (p2) at (-4, -1.2) {\textbf{Productor 2}\\[2pt]\scriptsize App Móvil};
+
+  \node[broker] (broker) at (0, 0) {\textbf{Canal de Eventos}\\ \textbf{Event Broker}\\[2pt]\footnotesize Kafka / RabbitMQ};
+
+  \node[consumer] (c1) at (4, 1.5) {\textbf{Consumidor 1}\\[2pt]\scriptsize Envío Logística};
+  \node[consumer] (c2) at (4, 0) {\textbf{Consumidor 2}\\[2pt]\scriptsize Facturación};
+  \node[consumer] (c3) at (4, -1.5) {\textbf{Consumidor 3}\\[2pt]\scriptsize Telemetría / BI};
+
+  \draw[arrow, color=primary] (p1.east) -- node[above, sloped] {\scriptsize Evento A} (broker.west);
+  \draw[arrow, color=primary] (p2.east) -- node[below, sloped] {\scriptsize Evento B} (broker.west);
+
+  \draw[arrow, color=alertgreen] (broker.east) -- (c1.west);
+  \draw[arrow, color=alertgreen] (broker.east) -- (c2.west);
+  \draw[arrow, color=alertgreen] (broker.east) -- (c3.west);
+\end{tikzpicture}
+\caption{Topología genérica de una Arquitectura Dirigida por Eventos (EDA) con un Event Broker central.}
+\label{fig:eda}
+\end{figure}
+
+\textbf{Formas de Procesar Eventos:}
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Eventos Simples:} Cambios medibles discretos en una condición (e.g., un sensor que detecta exceso de temperatura).
+  \item \textbf{Eventos en ``Stream'':} Cadenas continuas de eventos enviadas en tiempo real a suscriptores.
+  \item \textbf{Eventos Complejos (CEP):} Confluencia y correlación de patrones entre múltiples eventos temporales (e.g., detección de fraude bancario multidivisa).
+\end{enumerate}
+
+\subsection{Otros Estilos Notables: Pizarra (\emph{Blackboard}) y Peer-to-Peer}
+
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Estilo Pizarra (\emph{Blackboard}):} Especialmente útil en problemas de inteligencia artificial y reconocimiento de patrones donde no existe un algoritmo determinista para hallar la solución directa. Se compone de:
+    \begin{itemize}
+      \item \emph{La Pizarra (\emph{Blackboard}):} Memoria de trabajo compartida que alberga el estado actual del problema y las soluciones parciales.
+      \item \emph{Fuentes de Conocimiento (\emph{Knowledge Sources}):} Agentes especialistas autónomos que vigilan la pizarra y aportan soluciones parciales cuando identifican información relevante.
+      \item \emph{Mecanismo de Control:} Decide qué fuente de conocimiento tiene el turno para actuar.
+    \end{itemize}
+  \item \textbf{Estilo Peer-to-Peer (P2P):} Descentralización absoluta. Cada nodo de la red actúa simultáneamente como cliente y servidor (\emph{servent}), compartiendo ancho de banda, capacidad de cómputo y almacenamiento (e.g., BitTorrent, redes blockchain de Bitcoin y Ethereum).
+\end{itemize}
+
+% ==============================================================================
+% SECCIÓN 3: PATRONES DE ARQUITECTURA DE MICROSERVICIOS
+% ==============================================================================
+\section{Patrones Arquitectónicos para Sistemas Distribuidos y Microservicios}
+\label{sec:patrones-microservicios}
+
+La transición desde el monolito hacia la **Arquitectura de Microservicios (MSA)** exige un conjunto avanzado de patrones para garantizar la consistencia, disponibilidad y resiliencia del sistema distribuido.
+
+\begin{tradeoff}{Microservicios vs.\ Monolito Modular}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Microservicios:} Despliegues independientes, escalabilidad granular, heterogeneidad tecnológica y alta autonomía de equipos. A cambio, introducen complejidad operativa (DevOps masivo, observabilidad distribuida, latencia de red y riesgo de fallo parcial).
+  \item \textbf{Monolito Modular:} Máximo rendimiento en llamadas en memoria, sencillez de transacciones ACID y facilidad de pruebas iniciales. A cambio, límites de escalabilidad organizativa en equipos de cientos de ingenieros.
+\end{itemize}
+\end{tradeoff}
+
+\begin{antipatron}{Monolito Distribuido (\emph{Distributed Monolith})}
+Ocurre cuando un equipo divide su sistema en decenas de microservicios pero mantiene acoplamiento síncrono HTTP estricto entre ellos o una base de datos única compartida. Se obtienen todas las desventajas de los microservicios (latencia de red, fallos en cascada, pesadilla de despliegue) sin ninguna de sus ventajas (despliegues independientes, autonomía).
+\end{antipatron}
+
+\subsection{El Patrón SAGA: Gestión de Transacciones Distribuidas}
+
+En una arquitectura con base de datos por servicio (\emph{Database-per-Service}), no es posible utilizar transacciones ACID tradicionales de base de datos relacional (como el protocolo pesado de bloqueo en dos fases \emph{Two-Phase Commit - 2PC}) debido a su bajísimo rendimiento y riesgo de bloqueo global.
+
+\begin{patronarquitectura}{SAGA (Transacciones Distribuidas Compensatorias)}
+\textbf{Problema:} ¿Cómo mantener la consistencia de datos entre múltiples microservicios con bases de datos independientes sin usar bloqueos distribuidos?\\
+\textbf{Solución:} Implementar cada transacción de negocio como una secuencia de transacciones locales coordinadas. Cada transacción local actualiza la base de datos y emite un mensaje/evento. Si un paso intermedio falla, la SAGA ejecuta una serie de \textbf{transacciones compensatorias} que deshacen los cambios en orden inverso.
+\end{patronarquitectura}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  stepBox/.style={rectangle, draw=primary, fill=primary!15, thick, rounded corners=2mm, minimum width=2.8cm, minimum height=1.1cm, align=center},
+  compBox/.style={rectangle, draw=alertred, fill=alertred!15, thick, rounded corners=2mm, minimum width=2.8cm, minimum height=1.1cm, align=center},
+  arrowOk/.style={-{Stealth[scale=1.1]}, line width=1.3pt, color=alertgreen},
+  arrowFail/.style={-{Stealth[scale=1.1]}, line width=1.3pt, color=alertred, dashed}
+]
+  \node[stepBox] (t1) at (-4, 2) {\textbf{$T_1$: Crear Pedido}\\ \scriptsize (\emph{Estado: PENDING})};
+  \node[stepBox] (t2) at (0, 2) {\textbf{$T_2$: Reservar Saldo}\\ \scriptsize (Servicio Clientes)};
+  \node[stepBox, draw=alertred, fill=alertred!30] (t3) at (4, 2) {\textbf{$T_3$: Reservar Stock}\\ \scriptsize \textcolor{alertred}{\textbf{¡FALLO: Sin Stock!}}};
+
+  \node[compBox] (c2) at (0, -0.5) {\textbf{$C_2$: Reembolsar Saldo}\\ \scriptsize Transacción compensatoria};
+  \node[compBox] (c1) at (-4, -0.5) {\textbf{$C_1$: Cancelar Pedido}\\ \scriptsize (\emph{Estado: REJECTED})};
+
+  \draw[arrowOk] (t1.east) -- node[above] {\scriptsize OK} (t2.west);
+  \draw[arrowFail] (t2.east) -- node[above] {\scriptsize Falla $T_3$} (t3.west);
+
+  \draw[arrowFail] (t3.south) |- (c2.east);
+  \draw[arrowFail] (c2.west) -- node[above] {\scriptsize Compensa} (c1.east);
+\end{tikzpicture}
+\caption{Flujo de ejecución de una SAGA con transacciones compensatorias ante fallo.}
+\label{fig:saga-flow}
+\end{figure}
+
+\begin{importante}{Modelos de Coordinación de SAGAs}
+Existen dos formas de coordinar una SAGA:
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Coreografía (\emph{Choreography}):} Descentralizada. Cada servicio escucha eventos del bus y decide por sí mismo cuándo ejecutar su transacción local y qué evento emitir. No hay un punto único de control. Es óptima para flujos simples (2 a 4 pasos), pero difícil de depurar cuando el número de participantes crece.
+  \item \textbf{Orquestación (\emph{Orchestration}):} Centralizada. Un componente dedicado (\textbf{Saga Orchestrator}) actúa como director de orquesta enviando comandos directos a los microservicios participantes y procesando sus respuestas. Centraliza la máquina de estados de la transacción, simplificando la observabilidad y el control.
+\end{enumerate}
+\end{importante}
+
+\subsection{CQRS (\emph{Command Query Responsibility Segregation})}
+
+En muchos sistemas de alta demanda, los modelos conceptuales requeridos para \textbf{escribir datos} son completamente dispares a los requeridos para \textbf{leer datos}.
+
+\begin{patronarquitectura}{CQRS (Command Query Responsibility Segregation)}
+\textbf{Problema:} ¿Cómo implementar una consulta compleja que requiere agregar datos dispersos en múltiples microservicios sin sobrecargar los servicios ni violar el encapsulamiento de datos?\\
+\textbf{Solución:} Diseñar una vista de base de datos réplica o almacén de lectura optimizado exclusivamente para soportar las consultas. La aplicación mantiene sincronizada esta réplica mediante suscripción a eventos de dominio emitidos por cada servicio propietario de los datos.
+\end{patronarquitectura}
+
+Plataformas industriales como \textbf{Eventuate} (\emph{eventuate.io}) proporcionan infraestructura completa para la gestión de datos distribuida con soporte nativo para eventos y CQRS.
+
+\subsection{Circuit Breaker (Disyuntor)}
+
+\begin{patronarquitectura}{Circuit Breaker (Tolerancia a Fallos y Resiliencia)}
+\textbf{Problema:} Las peticiones a servicios remotos pueden fallar o demorarse indefinidamente por saturación de red, agotando los hilos de los servicios llamantes y provocando una caída catastrófica en cascada.\\
+\textbf{Solución:} Envolver las llamadas remotas en un disyuntor que monitoriza la tasa de fallos:
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Cerrado (\emph{Closed}):} Operación normal. Si la tasa de fallos supera el umbral límite, cambia a \textbf{Abierto}.
+  \item \textbf{Abierto (\emph{Open}):} Falla inmediatamente en local (\emph{Fail Fast}) sin invocar al servicio remoto, retornando un fallback.
+  \item \textbf{Semi-Abierto (\emph{Half-Open}):} Tras un tiempo de espera, permite pasar algunas peticiones de prueba para verificar si el servicio remoto se ha recuperado.
+\end{itemize}
+\end{patronarquitectura}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  state/.style={circle, draw=primary, fill=primary!15, thick, minimum size=2.2cm, align=center},
+  arrow/.style={-{Stealth[scale=1.1]}, line width=1.3pt}
+]
+  \node[state, fill=alertgreen!20, draw=alertgreen] (closed) at (-4, 0) {\textbf{Cerrado}\\[2pt]\scriptsize Tráfico normal};
+  \node[state, fill=alertred!20, draw=alertred] (open) at (4, 0) {\textbf{Abierto}\\[2pt]\scriptsize Falla rápido};
+  \node[state, fill=accent!25, draw=accent] (half) at (0, 2.5) {\textbf{Semi-Abierto}\\[2pt]\scriptsize Tráfico de prueba};
+
+  \draw[arrow, color=alertred] (closed) -- node[below] {\scriptsize Tasa de error $>$ Umbral} (open);
+  \draw[arrow, color=accent] (open) |- node[above, sloped] {\scriptsize Timeout de enfriamiento} (half);
+  \draw[arrow, color=alertgreen] (half) -| node[above, sloped] {\scriptsize Pruebas con éxito} (closed);
+  \draw[arrow, color=alertred] (half) -- node[right] {\scriptsize Fallo en prueba} (open);
+\end{tikzpicture}
+\caption{Máquina de estados del patrón Circuit Breaker.}
+\label{fig:circuit-breaker}
+\end{figure}
+
+% ==============================================================================
+% SECCIÓN 4: PATRONES DE DISEÑO GOF
+% ==============================================================================
+\section{Patrones de Diseño Clásicos (GoF)}
+\label{sec:patrones-gof}
+
+Los 23 patrones clásicos del libro de Gamma et al. (Gang of Four) se estructuran en tres grandes categorías según su propósito fundamental.
+
+\subsection{Patrones Creacionales}
+
+Abstraen el proceso de instanciación de objetos, desvinculando al sistema de cómo se crean, componen y representan sus elementos.
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Singleton:}\\
+  \textbf{Propósito:} Garantiza que una clase posea una \textbf{única instancia} en todo el ciclo de vida de la aplicación y proporciona un punto de acceso global a dicha instancia.
+  \begin{lstlisting}[language=java, caption={Implementación Thread-Safe del patrón Singleton con Double-Checked Locking}]
+  public class DatabaseConnectionPool {
+      private static volatile DatabaseConnectionPool instance;
+      
+      private DatabaseConnectionPool() {
+          // Constructor privado para impedir 'new' desde el exterior
+      }
+
+      public static DatabaseConnectionPool getInstance() {
+          if (instance == null) {
+              synchronized (DatabaseConnectionPool.class) {
+                  if (instance == null) {
+                      instance = new DatabaseConnectionPool();
+                  }
+              }
+          }
+          return instance;
+      }
+  }
+  \end{lstlisting}
+
+  \item \textbf{Builder:}\\
+  \textbf{Propósito:} Abstrae el proceso de creación de un objeto complejo, centralizando dicho proceso en un único punto y permitiendo crear diferentes representaciones con el mismo proceso de construcción.
+
+  \item \textbf{Factory Method:}\\
+  \textbf{Propósito:} Centraliza en una clase constructora la creación de objetos de un subtipo determinado, ocultando la diversidad de casos particulares y permitiendo a las subclases modificar el tipo de objeto a crear.
+
+  \item \textbf{Abstract Factory:}\\
+  \textbf{Propósito:} Encapsula un grupo de fábricas individuales bajo un tema común y utiliza interfaces genéricos para crear \textbf{familias de objetos relacionados} sin especificar sus clases concretas.
+
+  \item \textbf{Prototype:}\\
+  \textbf{Propósito:} Crea nuevos objetos duplicándolos o clonándolos a partir de una instancia prototípica existente.
+\end{enumerate}
+
+\subsection{Patrones Estructurales}
+
+Se centran en cómo se componen y ensamblan las clases y los objetos para formar estructuras más complejas y flexibles.
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Adapter (Wrapper):}\\
+  \textbf{Propósito:} Transforma una interfaz en otra. Adapta una interfaz para que pueda ser utilizada por una clase que de otro modo no podría utilizarla (e.g., wrappers para sistemas bancarios antiguos en COBOL dotándolos de un front-end Web moderno).
+
+  \item \textbf{Facade (Fachada):}\\
+  \textbf{Propósito:} Provee una interfaz unificada y simplificada a una librería, un framework o un conjunto complejo de clases de un subsistema.
+
+  \item \textbf{Proxy:}\\
+  \textbf{Propósito:} Proporciona un intermediario de un objeto para controlar su uso (habitual en servidores web para hacer caché de páginas o conexiones remotas).
+
+  \item \textbf{Decorator:}\\
+  \textbf{Propósito:} Añade funcionalidad a una clase de forma dinámica en tiempo de ejecución.
+\end{enumerate}
+
+\subsection{Patrones de Comportamiento}
+
+Abordan la asignación de responsabilidades, los algoritmos y la comunicación dinámica entre objetos.
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Observer (Publicador-Suscriptor Local):}\\
+  \textbf{Propósito:} Define una dependencia de uno-a-muchos entre objetos de forma que, cuando el sujeto cambia su estado, todos sus observadores son notificados y actualizados automáticamente.
+
+  \item \textbf{Publish-Subscribe:}\\
+  \textbf{Propósito:} Variante desacoplada a través de red donde los remitentes envían mensajes a canales sin conocer la identidad ni el número de suscriptores (MOM - Middleware Orientado a Mensajes).
+
+  \item \textbf{Mediator:}\\
+  \textbf{Propósito:} Encapsula la comunicación entre objetos a través de un objeto mediador central, reduciendo el acoplamiento y dependencias directas entre componentes.
+
+  \item \textbf{Strategy:}\\
+  \textbf{Propósito:} Permite disponer de varios métodos para resolver un problema y elegir cuál utilizar en tiempo de ejecución.
+
+  \item \textbf{State:}\\
+  \textbf{Propósito:} Permite que un objeto modifique su comportamiento cada vez que cambia su estado interno.
+
+  \item \textbf{Chain of Responsibility:}\\
+  \textbf{Propósito:} Permite establecer una línea o cadena que deben recorrer los mensajes para que los objetos gestionen la petición secuencialmente.
+
+  \item \textbf{Visitor:}\\
+  \textbf{Propósito:} Define nuevas operaciones sobre una jerarquía de clases sin modificar las clases originales sobre las que opera.
+\end{enumerate}
+
+\subsection{Otros Patrones: Parallel Split (Flujos de Trabajo / Workflows)}
+
+\begin{patronarquitectura}{Parallel Split}
+\textbf{Propósito:} Es un punto del flujo de control donde un hilo de ejecución individual se bifurca en múltiples hilos que pueden ejecutarse concurrentemente en paralelo, permitiendo la ejecución simultánea de varias actividades. Es un patrón básico de control de flujo en orquestaciones web (BPEL, reservas de vuelos u hoteles donde se consultan múltiples aerolíneas a la vez).
+\end{patronarquitectura}
+
+% ==============================================================================
+% SECCIÓN 5: MODELADO ARQUITECTÓNICO CON UML 2.5
+% ==============================================================================
+\section{Vistas Arquitectónicas y Modelado con UML 2.5}
+\label{sec:modelado-uml}
+
+El estándar **UML 2.5** (Unified Modeling Language) de la OMG proporciona la notación gráfica formal para documentar las decisiones arquitectónicas en las distintas vistas del sistema.
+
+\subsection{El Modelo de Vistas 4+1 de Philippe Kruchten}
+
+\begin{definicion}{Modelo 4+1 (Kruchten, 1995)}
+Propone organizar la documentación arquitectónica en cinco vistas complementarias:
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Vista Lógica (Design View):} Captura las entidades lógicas (clases, paquetes, interfaces) y cómo se interconectan. Satisface los requisitos funcionales.
+  \item \textbf{Vista de Procesos (Process View):} Modela aspectos dinámicos de concurrencia, sincronización, hilos y rendimiento.
+  \item \textbf{Vista de Implementación / Desarrollo:} Modela los componentes de software físicos (artefactos, librerías, dependencias).
+  \item \textbf{Vista de Despliegue (Deployment View):} Modela la asignación de entidades lógicas y componentes sobre la infraestructura física de hardware y red.
+  \item \textbf{Vista de Casos de Uso (+1):} Escenarios que validan e integran las cuatro vistas anteriores.
+\end{enumerate}
+\end{definicion}
+
+\subsection{Diagramas de Paquetes: Modelado de Subsistemas y Estilos}
+
+Los paquetes describen subsistemas. \textbf{No debe haber paquetes vacíos} y deben llevar un estereotipo (\texttt{<<stereotype>>}) que indique su misión:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  pkg/.style={rectangle, draw=primary, fill=bglight, thick, rounded corners=1.5mm, minimum width=3.8cm, minimum height=1.1cm, align=center},
+  tab/.style={rectangle, draw=primary, fill=primary!20, thick, rounded corners=1mm, minimum width=1.5cm, minimum height=0.4cm, align=center},
+  arrow/.style={-{Stealth[scale=1.1]}, dashed, thick, color=secondary}
+]
+  % Paquete Interfaz
+  \node[tab] at (-3, 3.8) {\scriptsize \texttt{<<layer>>}};
+  \node[pkg, fill=primary!10] (ui) at (-3, 3) {\textbf{Interfaz de Usuario}};
+
+  % Paquete Negocio
+  \node[tab] at (-3, 1.8) {\scriptsize \texttt{<<layer>>}};
+  \node[pkg, fill=secondary!10] (neg) at (-3, 1) {\textbf{Lógica de Negocio}};
+
+  % Paquete Datos
+  \node[tab] at (-3, -0.2) {\scriptsize \texttt{<<layer>>}};
+  \node[pkg, fill=accent!10] (dat) at (-3, -1) {\textbf{Acceso a Datos}};
+
+  % Paquete Transversal Seguridad
+  \node[tab] at (3, 1.8) {\scriptsize \texttt{<<service>>}};
+  \node[pkg, fill=alertgreen!10] (sec) at (3, 1) {\textbf{Capa de Seguridad}};
+
+  \draw[arrow] (ui) -- node[right] {\scriptsize \texttt{<<import>>}} (neg);
+  \draw[arrow] (neg) -- node[right] {\scriptsize \texttt{<<import>>}} (dat);
+  \draw[arrow] (ui) -| node[above] {\scriptsize \texttt{<<uses>>}} (sec);
+  \draw[arrow] (neg) -- node[above] {\scriptsize \texttt{<<uses>>}} (sec);
+\end{tikzpicture}
+\caption{Modelado UML del estilo por capas mediante diagramas de paquetes.}
+\label{fig:uml-packages}
+\end{figure}
+
+\subsection{Taxonomía de Relaciones en Diagramas de Clases UML}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l p{4.5cm} X}
+\toprule
+\textbf{Relación UML} & \textbf{Simbología Visual} & \textbf{Significado Semántico y Ciclo de Vida} \\
+\midrule
+\textbf{Asociación} & Línea sólida continua (con flecha opcional) & Conexión semántica estructural entre clases. Indica envío de mensajes o conocimiento mutuo. \\
+\addlinespace
+\textbf{Agregación Débil} & Línea con \textbf{rombo blanco / vacío} en el contenedor & Relación ``todo-parte'' no destructiva. La parte puede existir independientemente del contenedor (ej., Universidad y Estudiante). \\
+\addlinespace
+\textbf{Composición Fuerte} & Línea con \textbf{rombo negro / relleno} en el contenedor & Relación de pertenencia física y ciclo de vida compartido. Si se destruye el contenedor, se destruyen obligatoriamente las partes (ej., Factura y LíneasDeFactura). \\
+\addlinespace
+\textbf{Generalización} & Línea con \textbf{flecha triangular hueca} hacia la superclase & Herencia estricta en orientación a objetos. Relación taxonómica ``es un tipo de''. \\
+\addlinespace
+\textbf{Realización} & Línea \textbf{discontinua con flecha triangular hueca} & Implementación de un contrato o interfaz abstracta por parte de una clase concreta. \\
+\addlinespace
+\textbf{Dependencia} & Línea \textbf{discontinua con flecha simple} & Un cambio en el elemento proveedor puede forzar cambios en el cliente. Uso temporal como parámetro de método (\texttt{<<uses>>}). \\
+\bottomrule
+\end{tabularx}
+\caption{Taxonomía formal de relaciones en diagramas de clases UML.}
+\label{tab:relaciones-uml}
+\end{table}
+
+\subsection{Mecanismos de Extensión de UML: Estereotipos, Valores Etiquetados y OCL}
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Estereotipos (\texttt{<<nombre>>}):} Extienden la semántica de un elemento para representar una variante con distinta intención (e.g., \texttt{<<exception>>}, \texttt{<<entity>>}, \texttt{<<boundary>>}).
+  \item \textbf{Valores Etiquetados (\emph{Tagged Values}):} Extienden las propiedades añadiendo pares clave-valor entre llaves: \texttt{\{versión=3.2, autor="URJC"\}}.
+  \item \textbf{Restricciones y OCL (\emph{Object Constraint Language}):} Notación formal para especificar pre-condiciones, post-condiciones e invariantes del sistema (e.g., \texttt{\{edad > 18\}}).
+\end{enumerate}
+
+\begin{importante}{Perfiles Especializados: SysML y MARTE}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{SysML (\emph{Systems Modeling Language}):} Extensión de la paleta tradicional de símbolos UML para modelar ingeniería de sistemas (hardware, energía, requisitos).
+  \item \textbf{MARTE (\emph{Modeling and Analysis of Real-Time and Embedded Systems}):} Extensión oficial para sistemas empotrados y de tiempo real con soporte explícito para deadlines, prioridades y análisis de planificabilidad temporal.
+\end{itemize}
+\end{importante}
+
+% ==============================================================================
+% SECCIÓN 6: NOTACIÓN C4
+% ==============================================================================
+\section{Notación Arquitectónica Moderna: El Modelo C4}
+\label{sec:modelo-c4}
+
+Creado por el arquitecto Simon Brown, el **Modelo C4** (\emph{Context, Containers, Components, Code}) fue concebido para ayudar a los desarrolladores a comunicar la arquitectura y documentar el diseño del software reflejando fielmente cómo piensan los arquitectos.
+
+\begin{definicion}{Abstracciones del Modelo C4}
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{System Context (Contexto):} Punto de partida. No muestra detalles internos; se centra en los usuarios (\emph{stakeholders}) y los sistemas externos con los que interactúa el software.
+  \item \textbf{Container (Contenedores):} Muestra los contenedores principales del sistema (aplicaciones web SPA, apps móviles, microservicios, bases de datos). Incluye decisiones tecnológicas clave.
+  \item \textbf{Component (Componentes):} Amplía el detalle de un contenedor individual, mostrando sus componentes lógicos internos (controladores, servicios, fachadas).
+  \item \textbf{Code (Código):} Detalles de implementación a nivel de clases e interfaces (habitualmente diagramas de clases UML).
+\end{enumerate}
+\end{definicion}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l p{4.5cm} X}
+\toprule
+\textbf{Nivel C4} & \textbf{Audiencia Objetivo} & \textbf{¿Qué muestra?} \\
+\midrule
+\textbf{1. Contexto} & Negocio, directores, nuevos desarrolladores & El sistema completo como una caja negra en el centro, rodeado por los usuarios humanos y los sistemas externos con los que se comunica. \\
+\addlinespace
+\textbf{2. Contenedores} & Desarrolladores, DevOps, arquitectos & La arquitectura de ejecución: aplicaciones web (SPA), backend API, base de datos Postgres, broker Kafka, sistema de archivos. \\
+\addlinespace
+\textbf{3. Componentes} & Desarrolladores que implementan código & La descomposición interna de un contenedor concreto: módulos lógicos, interfaces internas y patrones. \\
+\addlinespace
+\textbf{4. Código} & Ingenieros de implementación & Opcional. Representación exacta de clases y métodos (habitualmente diagramas de clases generados automáticamente). \\
+\bottomrule
+\end{tabularx}
+\caption{Resumen de los cuatro niveles de abstracción en C4.}
+\label{tab:c4-niveles}
+\end{table}
+
+% ==============================================================================
+% SECCIÓN 7: EJERCICIOS RESUELTOS Y CASOS PRÁCTICOS DE EXAMEN
+% ==============================================================================
+\section{Ejercicios Resueltos y Casos Prácticos de Examen}
+\label{sec:ejercicios-tema2}
+
+\begin{ejercicioresuelto}{Diseño de una Transacción Distribuida con Patrón SAGA}
+\textbf{Enunciado:}\\
+Una plataforma de venta de entradas para conciertos en línea migró a microservicios: \texttt{OrderService}, \texttt{PaymentService} y \texttt{TicketInventoryService}. Se requiere procesar una compra garantizando que, si el cobro bancario falla tras haberse reservado las butacas, el sistema no quede en un estado inconsistente.
+
+\textbf{Tarea del Ingeniero:}\\
+\begin{enumerate}
+  \item Justifique por qué el protocolo Two-Phase Commit (2PC) no es adecuado para este escenario.
+  \item Diseñe una SAGA Orquestada detallando las transacciones locales y las transacciones compensatorias.
+\end{enumerate}
+
+\vspace{0.5em}
+\textbf{Solución Razonada:}
+
+\textbf{1. Inadecuación de Two-Phase Commit (2PC):}
+El protocolo 2PC es síncrono y bloqueante: durante la fase de votación y preparación, las filas de base de datos en todos los microservicios participantes quedan bloqueadas exclusivamente. En un evento de venta masiva de entradas con miles de usuarios concurrentes, 2PC colapsaría el rendimiento, reduciría la disponibilidad drásticamente y aumentaría el riesgo de caídas en cascada. Por ello, se aplica el principio de consistencia eventual mediante el patrón SAGA.
+
+\textbf{2. Diseño de la SAGA Orquestada:}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Orquestador:} \texttt{CreateOrderSagaOrchestrator}.
+  \item \textbf{Paso 1 ($T_1$):} \texttt{TicketInventoryService.bloquearButacas(eventoId, butacas)} $\to$ Éxito (las butacas pasan a estado \texttt{RESERVADA\_TEMPORAL}).
+  \item \textbf{Paso 2 ($T_2$):} \texttt{PaymentService.cobrarTarjeta(tarjetaId, importe)} $\to$ \textcolor{alertred}{\textbf{¡Fallo: Tarjeta caducada o fondos insuficientes!}}
+  \item \textbf{Compensación ($C_1$):} El orquestador detecta el fallo en $T_2$ y envía el comando de compensación: \texttt{TicketInventoryService.liberarButacas(eventoId, butacas)}. Las butacas vuelven a estar disponibles inmediatamente para otros usuarios.
+  \item \textbf{Cierre:} El orquestador marca el pedido en \texttt{OrderService} con estado \texttt{CANCELADO\_POR\_ERROR\_PAGO}.
+\end{itemize}
+\end{ejercicioresuelto}
+
+\begin{ejercicioresuelto}{Selección Justificada de Estilos Arquitectónicos}
+\textbf{Enunciado:}\\
+Una multinacional de logística requiere diseñar un sistema para rastrear en tiempo real 500.000 camiones de reparto en Europa. Cada camión envía su posición GPS y lecturas de telemetría del motor cada 5 segundos. La aplicación debe:
+\begin{itemize}
+  \item Detectar anomalías térmicas en la cadena de frío en menos de 2 segundos.
+  \item Generar informes de consumo mensual para gerencia.
+\end{itemize}
+Seleccione y razone qué estilo o combinación heterogénea de estilos arquitectónicos debe adoptar la solución.
+
+\vspace{0.5em}
+\textbf{Solución Razonada:}
+Se requiere una combinación heterogénea de estilos:
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Estilo Dirigido por Eventos (EDA) con Event Streaming (Kafka/Pulsar):} Para la ingesta masiva de telemetría en tiempo real desde los 500.000 camiones (100.000 eventos/segundo) de forma desacoplada y tolerante a fallos.
+  \item \textbf{Procesamiento de Eventos Complejos (CEP) / Pipes \& Filters:} Un motor de streaming continuo (Apache Flink) procesa el flujo en ventana deslizante para detectar la anomalía térmica en menos de 2 segundos y disparar alertas inmediatas.
+  \item \textbf{CQRS:} Se segrega el modelo de escritura (ingesta masiva de streaming en base de datos Time-Series) del modelo de consultas para los informes de gerencia (Data Warehouse analítico con consultas OLAP).
+\end{enumerate}
+\end{ejercicioresuelto}
+
+% ==============================================================================
+% SECCIÓN 8: RESUMEN EJECUTIVO Y PREGUNTAS DE AUTOEVALUACIÓN
+% ==============================================================================
+\section{Resumen Ejecutivo y Preguntas de Autoevaluación}
+\label{sec:resumen-tema2}
+
+\begin{tcolorbox}[
+  enhanced,
+  colback=secondary!5!bglight,
+  colframe=secondary,
+  arc=3mm,
+  boxrule=1pt,
+  title={\bfseries\color{white} Resumen de Conceptos Clave del Tema 2},
+  coltitle=white
+]
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Estilos vs.\ Patrones:} Los estilos definen la estructura global y los grandes subsistemas; los patrones operan a escala micro/media sobre clases y objetos.
+  \item \textbf{Principios RESTful:} Cliente-Servidor, Sin Estado (\emph{Stateless}), Cacheable, Sistema en Capas, Interfaz Uniforme y Código bajo demanda opcional.
+  \item \textbf{Microservicios Avanzados:} Se rigen por patrones como SAGA (transacciones compensatorias locales para consistencia eventual), CQRS (segregación de lectura y escritura) y Circuit Breaker (resiliencia y contención de fallos).
+  \item \textbf{Modelado UML 2.5:} Los paquetes definen los estilos de la arquitectura; las relaciones entre paquetes deben usar \texttt{<<import>>} sin atravesar niveles de forma caótica.
+  \item \textbf{Modelo C4:} Alternativa moderna y complementaria a UML basada en 4 niveles de zoom: Contexto, Contenedores, Componentes y Código.
+\end{itemize}
+\end{tcolorbox}
+
+\subsection{Batería de Preguntas de Autoevaluación}
+
+\begin{enumerate}[leftmargin=1.8em]
+  \item \textbf{¿Por qué una arquitectura software no puede calificarse únicamente bajo un único estilo?} \\
+  \emph{Respuesta orientativa:} Porque los sistemas reales son heterogéneos: un estilo macro (como Microservicios) suele alojar subsistemas que implementan internamente otros estilos (como Pipes \& Filters o EDA) para satisfacer atributos de calidad diversos.
+
+  \item \textbf{Explique los tres estados del patrón Circuit Breaker y cómo previenen las caídas en cascada.} \\
+  \emph{Respuesta orientativa:} Cerrado (tráfico normal), Abierto (falla rápido en local sin sobrecargar el servicio caído) y Semi-Abierto (prueba peticiones exploratorias tras un tiempo de enfriamiento). Impide que los hilos de los servicios llamantes se bloqueen esperando timeouts acumulados.
+
+  \item \textbf{¿Cuál es la diferencia semántica entre agregación y composición en un diagrama de clases UML?} \\
+  \emph{Respuesta orientativa:} La agregación (rombo blanco) es una relación débil donde las partes pueden subsistir sin el contenedor. La composición (rombo negro) es fuerte y define coincidencia de ciclo de vida: si se destruye el contenedor, las partes se destruyen obligatoriamente con él.
+
+  \item \textbf{¿Qué representan los cuatro niveles de la Notación C4?} \\
+  \emph{Respuesta orientativa:} 1. Contexto (visión general con personas y sistemas externos); 2. Contenedores (aplicaciones ejecutables y almacenes de datos); 3. Componentes (módulos internos de un contenedor); 4. Código (diagramas de clases de implementación).
+\end{enumerate}

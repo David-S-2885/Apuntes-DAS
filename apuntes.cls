@@ -297,6 +297,64 @@
   #1
 }
 
+% --- Cajas especializadas para Diseño y Arquitectura Software (DAS) ---
+
+\newtcolorbox{patronarquitectura}[2][]{
+  enhanced,
+  breakable,
+  colback=secondary!3!bglight,
+  colframe=secondary,
+  arc=3mm,
+  boxrule=0.8pt,
+  leftrule=4.5pt,
+  fonttitle=\bfseries\color{secondary},
+  title={$\varhexagon$ Patrón / Estilo Arquitectónico: #2},
+  attach title to upper=\par\vspace{0.4em},
+  #1
+}
+
+\newtcolorbox{antipatron}[2][]{
+  enhanced,
+  breakable,
+  colback=alertred!4!bglight,
+  colframe=alertred,
+  arc=3mm,
+  boxrule=0.8pt,
+  leftrule=4.5pt,
+  fonttitle=\bfseries\color{alertred},
+  title={$\text{\sffamily X}$ Anti-Patrón de Diseño: #2},
+  attach title to upper=\par\vspace{0.4em},
+  #1
+}
+
+\newtcolorbox{tradeoff}[2][]{
+  enhanced,
+  breakable,
+  colback=accent!4!bglight,
+  colframe=accent,
+  arc=3mm,
+  boxrule=0.8pt,
+  leftrule=4.5pt,
+  fonttitle=\bfseries\color{accent},
+  title={$\rightleftharpoons$ Compromiso Arquitectónico (\emph{Trade-off}): #2},
+  attach title to upper=\par\vspace{0.4em},
+  #1
+}
+
+\newtcolorbox{principio}[2][]{
+  enhanced,
+  breakable,
+  colback=primary!4!bglight,
+  colframe=primary,
+  arc=3mm,
+  boxrule=0.8pt,
+  leftrule=4.5pt,
+  fonttitle=\bfseries\color{primary},
+  title={$\bigstar$ Principio Fundamental de Diseño: #2},
+  attach title to upper=\par\vspace{0.4em},
+  #1
+}
+
 % ==============================================================================
 % CONFIGURACIÓN DE LISTINGS PARA CÓDIGO FUENTE
 % ==============================================================================
@@ -376,6 +434,48 @@
   morestring=[b]',
   morestring=[b]",
   morestring=[b]`
+}
+
+% Definición de estilo para TypeScript
+\lstdefinelanguage{typescript}{
+  keywords={abstract, any, as, async, await, boolean, break, case, catch, class, const, constructor, continue, debugger, declare, default, delete, do, else, enum, export, extends, false, finally, for, from, function, get, if, implements, import, in, instanceof, interface, let, module, new, null, number, of, package, private, protected, public, readonly, require, return, set, static, string, super, switch, symbol, this, throw, true, try, type, typeof, undefined, var, void, while, with, yield, readonly, override},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]',
+  morestring=[b]",
+  morestring=[b]`
+}
+
+% Definición de estilo para Java
+\lstdefinelanguage{java}{
+  keywords={abstract, assert, boolean, break, byte, case, catch, char, class, const, continue, default, do, double, else, enum, extends, final, finally, float, for, goto, if, implements, import, instanceof, int, interface, long, native, new, package, private, protected, public, return, short, static, strictfp, super, switch, synchronized, this, throw, throws, transient, try, void, volatile, while, record, sealed, permits, non-sealed, var, yield},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]'
+}
+
+% Definición de estilo para Bash / Shell
+\lstdefinelanguage{bash}{
+  keywords={grep, cat, awk, sed, sort, uniq, echo, cd, ls, mkdir, rm, curl, wget, docker, kubectl, git, find},
+  sensitive=true,
+  morecomment=[l]{\#},
+  morestring=[b]",
+  morestring=[b]'
+}
+
+% ==============================================================================
+% ESTILOS TIKZ PRECONFIGURADOS PARA ARQUITECTURA SOFTWARE
+% ==============================================================================
+\tikzset{
+  umlclass/.style={rectangle, draw=primary, fill=bglight, thick, rounded corners=1.5mm, inner sep=6pt, align=center},
+  umlpackage/.style={rectangle, draw=secondary, fill=secondary!10, thick, rounded corners=2mm, inner sep=8pt, align=center},
+  umlcomponent/.style={rectangle, draw=primary, fill=primary!15, thick, rounded corners=1.5mm, inner sep=6pt, align=center},
+  c4container/.style={rectangle, draw=secondary, fill=secondary!20, thick, rounded corners=3mm, inner sep=8pt, align=center},
+  c4component/.style={rectangle, draw=accent, fill=accent!20, thick, rounded corners=2mm, inner sep=6pt, align=center},
+  dbnode/.style={cylinder, draw=primary, fill=primary!20, shape border rotate=90, thick, aspect=0.25, align=center}
 }
 
 % ==============================================================================

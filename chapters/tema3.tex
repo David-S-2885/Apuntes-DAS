@@ -1,0 +1,632 @@
+% !TeX root = ../main.tex
+\chapter{Decisiones de Diseño y Gestión del Conocimiento Arquitectónico}
+\label{cap:tema3}
+
+\begin{tcolorbox}[
+  enhanced,
+  colback=primary!5!bglight,
+  colframe=primary,
+  arc=3mm,
+  boxrule=1pt,
+  title={\bfseries\color{white} Objetivos de Aprendizaje del Tema 3},
+  coltitle=white
+]
+Al finalizar este capítulo, el estudiante e ingeniero de software será capaz de:
+\begin{itemize}[leftmargin=1.5em]
+  \item Comprender el cambio de paradigma formulado por Jan Bosch (2004): la \textbf{Arquitectura Software como un conjunto de decisiones de diseño} (\emph{Architectural Design Decisions - ADD}) más que como una mera composición de componentes y conectores.
+  \item Identificar y mitigar el fenómeno de la \textbf{evaporación del conocimiento tácito} (\emph{knowledge vaporization}) en las organizaciones de ingeniería.
+  \item Aplicar el estándar internacional \textbf{ISO/IEC/IEEE 42010:2022}, reconociendo a las decisiones de diseño y a su justificación (\emph{rationale}) como elementos de primera clase.
+  \item Analizar e implementar la \textbf{Vista de la Decisión} (\emph{Decision View}) como una dimensión arquitectónica transversal a los requisitos y a las vistas del modelo 4+1 de Kruchten.
+  \item Dominar los procesos del ciclo de vida de la \textbf{Gestión del Conocimiento Arquitectónico} (\emph{Architecture Knowledge Management - AKM}): Creación, Compartición, Evaluación y Aprendizaje.
+  \item Establecer redes formales de \textbf{trazabilidad externa} (\emph{forward} y \emph{backward traceability}) entre requisitos, decisiones y elementos de diseño, así como de \textbf{trazabilidad interna} entre decisiones mediante ontologías.
+  \item Conocer la evolución histórica de las tres generaciones de herramientas de AKM (desde \emph{PAKME}, \emph{Archium} y \emph{ADDSS} hasta \emph{SAW}, \emph{ADvISE} y \emph{ADMentor}).
+  \item Redactar registros de decisión arquitectónica profesionales mediante el formato estándar \textbf{MADR} (\emph{Markdown Architectural Decision Records}), evitando errores habituales de superficialidad y descontextualización.
+  \item Aplicar el marco de pensamiento crítico y reflexivo \textbf{Mind 1 / Mind 2} para desafiar y validar decisiones arquitectónicas antes de consolidarlas en código.
+\end{itemize}
+\end{tcolorbox}
+
+\vspace{1em}
+
+% ==============================================================================
+% SECCIÓN 1: FUNDAMENTOS DEL CONOCIMIENTO ARQUITECTÓNICO
+% ==============================================================================
+\section{Fundamentos del Conocimiento Arquitectónico y Decisiones de Diseño (ADD)}
+\label{sec:fundamentos-add}
+
+\subsection{El Cambio de Paradigma: Jan Bosch (2004)}
+
+Tradicionalmente, la arquitectura software se describía casi en exclusiva mediante diagramas de cajas y flechas que representaban componentes computacionales y conectores de comunicación. Sin embargo, en 2004, el investigador Jan Bosch formuló una crítica fundamental que transformó la disciplina:
+
+\begin{principio}{La Arquitectura Software como Conjunto de Decisiones (Jan Bosch, 2004)}
+\emph{<<Una Arquitectura Software debe ser considerada primariamente como el resultado acumulado de un conjunto de Decisiones de Diseño Arquitectónico (ADD -- Architectural Design Decisions), más que como un mero conjunto de componentes y conectores>>}.
+\end{principio}
+
+Cuando únicamente se conservan los diagramas estructurales y el código resultante, se produce la denominada \textbf{evaporación del conocimiento arquitectónico} (\emph{Architectural Knowledge Vaporization}):
+\begin{itemize}[leftmargin=1.5em]
+  \item Se desconoce el \textbf{porqué} (\emph{rationale}) de la estructura adoptada.
+  \item Se olvidan las \textbf{alternativas descartadas} y los motivos específicos por los que fueron rechazadas.
+  \item Se ignora qué requisitos no funcionales críticos justificaron la complejidad introducida.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  reqBox/.style={rectangle, draw=accent, fill=accent!20, thick, rounded corners=2mm, minimum width=3cm, minimum height=1.2cm, align=center},
+  decBox/.style={ellipse, draw=secondary, fill=secondary!20, thick, minimum width=3.5cm, minimum height=1.4cm, align=center},
+  archBox/.style={rectangle, draw=primary, fill=primary!20, thick, rounded corners=2mm, minimum width=3cm, minimum height=1.2cm, align=center},
+  knowNode/.style={cylinder, draw=alertgreen, fill=alertgreen!20, shape border rotate=90, thick, minimum width=3.2cm, minimum height=1.6cm, align=center},
+  arrow/.style={-{Stealth[scale=1.2]}, line width=1.5pt}
+]
+  \node[reqBox] (req) at (-4.5, 2) {\textbf{Requisitos Software}\\ \footnotesize (RF y Atributos RNF)};
+  \node[decBox] (dec) at (0, 2) {\textbf{Decisiones de Diseño}\\ \textbf{(ADD)}\\ \scriptsize Núcleo articulador};
+  \node[archBox] (arch) at (4.5, 2) {\textbf{Arquitectura Software}\\ \footnotesize (Componentes, interfaces)};
+
+  \node[knowNode] (know) at (0, -1) {\textbf{Conocimiento Reutilizable}\\ \footnotesize (Estilos, Patrones GoF,\\ Heurísticas, Lecciones)};
+
+  \draw[{Stealth[scale=1.2]}-{Stealth[scale=1.2]}, line width=1.5pt, color=secondary] (req) -- (dec);
+  \draw[{Stealth[scale=1.2]}-{Stealth[scale=1.2]}, line width=1.5pt, color=secondary] (dec) -- (arch);
+  \draw[{Stealth[scale=1.2]}-{Stealth[scale=1.2]}, line width=1.5pt, color=alertgreen] (know) -- (dec);
+\end{tikzpicture}
+\caption{Las Decisiones de Diseño como puente integrador entre los requisitos y la arquitectura.}
+\label{fig:puente-decisiones}
+\end{figure}
+
+\subsection{Conocimiento Tácito frente a Conocimiento Explícito}
+
+En la mayoría de las empresas de desarrollo, la mayor parte del conocimiento arquitectónico es \textbf{conocimiento tácito o implícito}: reside únicamente en la cabeza de los arquitectos senior que lideraron la creación del sistema.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l p{5.5cm} X}
+\toprule
+\textbf{Dimensión} & \textbf{Conocimiento Tácito (No documentado)} & \textbf{Conocimiento Explícito (Capturado en AKM)} \\
+\midrule
+\textbf{Ubicación} & Mentes individuales de los ingenieros. & Repositorio Git (ADRs), wikis o herramientas AKM. \\
+\addlinespace
+\textbf{Riesgo de Rotación} & \textbf{Crítico.} Si el arquitecto abandona la empresa, el conocimiento se pierde (\emph{Bus Factor = 1}). & \textbf{Nulo.} El conocimiento permanece accesible para todo el equipo. \\
+\addlinespace
+\textbf{Onboarding} & Lento, dependiente de reuniones orales repetitivas y confusas. & Rápido y autónomo; los nuevos miembros leen el histórico de decisiones. \\
+\addlinespace
+\textbf{Evolución y Deuda} & Se introducen cambios incompatibles que degradan la arquitectura (\emph{Erosión}). & Cada nuevo cambio se contrasta con las decisiones previas y sus restricciones. \\
+\bottomrule
+\end{tabularx}
+\caption{Impacto organizativo del conocimiento tácito frente al explícito.}
+\label{tab:tacito-explicito}
+\end{table}
+
+Hacer explícito este conocimiento permite que las decisiones sean \textbf{reutilizables, transferibles y reproducibles}, cubriendo de forma definitiva el hueco (\emph{gap}) histórico entre los requisitos del cliente y la implementación del software.
+
+\subsection{El Estándar Internacional ISO/IEC/IEEE 42010:2022}
+
+El estándar internacional para la descripción de la arquitectura de sistemas intensivos en software (\textbf{ISO/IEC/IEEE 42010:2022}) consolida esta visión al elevar formalmente las decisiones de diseño a elementos fundamentales:
+
+\begin{definicion}{Decisiones en el Estándar ISO/IEC/IEEE 42010}
+El estándar estipula que toda descripción arquitectónica debe incorporar formalmente:
+\begin{itemize}[leftmargin=1.5em]
+  \item Las \textbf{Decisiones de Diseño Arquitectónico} que modelan la solución.
+  \item La \textbf{Justificación (\emph{Rationale})} técnica, funcional y de negocio que soporta cada decisión frente a sus alternativas.
+  \item El registro de los \textbf{compromisos (\emph{trade-offs})} asumidos y los riesgos derivados.
+\end{itemize}
+\end{definicion}
+
+% ==============================================================================
+% SECCIÓN 2: CARACTERIZACIÓN Y MODELOS DE CAPTURA
+% ==============================================================================
+\section{Caracterización de Decisiones y Modelos de Captura}
+\label{sec:caracterizacion-decisiones}
+
+Dado que las decisiones de diseño se formulan originalmente en lenguaje natural humano, es imprescindible caracterizarlas mediante esquemas estructurados para evitar ambigüedades.
+
+\subsection{Aproximaciones de Captura de Decisiones}
+
+Existen tres aproximaciones principales para registrar y caracterizar las ADDs:
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Plantillas de Texto Estructurado y Ficheros Markdown (ADRs):} Esquemas estandarizados en texto plano versionados junto con el código fuente en Git. Es la aproximación dominante en la industria moderna por su ligereza y nula fricción.
+  \item \textbf{Ontologías Semánticas:} Modelos basados en grafos formales (RDF/OWL) que describen tipos de decisiones, estados, exclusiones y relaciones de compatibilidad procesables por motores de inferencia.
+  \item \textbf{Anotaciones en Código Fuente:} Metadatos incrustados directamente sobre clases o módulos (e.g., \texttt{@ArchDecision("AD-004", rationale="...")}).
+\end{enumerate}
+
+\subsection{El Modelo Canónico de Tyree y Akerman (2005)}
+
+Publicado por Jeff Tyree y Art Akerman (arquitectos de Capital One) en \emph{IEEE Software}, definió la primera plantilla exhaustiva de la industria, estructurada en 14 atributos fundamentales:
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l p{4cm} X}
+\toprule
+\textbf{Atributo} & \textbf{Nombre en Inglés} & \textbf{Descripción Técnica} \\
+\midrule
+\textbf{Identificador} & \texttt{Name / ID} & Nombre breve y unívoco que sintetiza el problema resuelto (e.g., \texttt{AD-012: Cache Distribuida}). \\
+\addlinespace
+\textbf{Problema de Diseño} & \texttt{Issue} & El reto arquitectónico o necesidad técnica precisa que se debe resolver. \\
+\addlinespace
+\textbf{Decisión} & \texttt{Decision} & La solución adoptada y su alcance en el diseño. \\
+\addlinespace
+\textbf{Estado} & \texttt{Status} & Ciclo de vida: \emph{Pendiente, Decidida, Aprobada, Rechazada, Obsoleta}. \\
+\addlinespace
+\textbf{Restricciones} & \texttt{Constraints} & Límites impuestos por el entorno, presupuesto, leyes (GDPR) o tecnología existente. \\
+\addlinespace
+\textbf{Alternativas} & \texttt{Positions / Alternatives} & Soluciones tecnológicas o patrones viables considerados durante el análisis. \\
+\addlinespace
+\textbf{Justificación} & \texttt{Rationale / Argument} & El razonamiento detallado de por qué la opción elegida supera a las alternativas. \\
+\addlinespace
+\textbf{Implicaciones} & \texttt{Implications} & Consecuencias colaterales: nuevos componentes requeridos, costes de licencia, formación. \\
+\addlinespace
+\textbf{Relaciones} & \texttt{Related Decisions} & Vínculos con otras decisiones (si la permite, requiere, excluye o modifica). \\
+\addlinespace
+\textbf{Trazabilidad} & \texttt{Related Requirements} & Requisitos funcionales o atributos de calidad (RNF) que motivaron la decisión. \\
+\bottomrule
+\end{tabularx}
+\caption{Atributos esenciales de la plantilla de Tyree y Akerman (2005).}
+\label{tab:tyree-akerman}
+\end{table}
+
+\begin{importante}{Flexibilidad en la Captura}
+Uno de los mayores motivos de fracaso en la adopción de plantillas densas como la de Tyree \& Akerman en empresas ágiles es la \textbf{fatiga burocrática}: obligar a los ingenieros a rellenar 14 campos densos para cada pequeña decisión paraliza el desarrollo. Por ello, las metodologías modernas definen un conjunto \textbf{mínimo obligatorio} (Problema, Decisión, Justificación, Consecuencias) y dejan los atributos adicionales como opcionales según la criticidad del subsistema.
+\end{importante}
+
+% ==============================================================================
+% SECCIÓN 3: LA VISTA DE LA DECISIÓN Y TRAZABILIDAD
+% ==============================================================================
+\section{La Vista de la Decisión y Procesos de AKM}
+\label{sec:vista-decision-procesos}
+
+\subsection{La Vista de la Decisión en la Arquitectura}
+
+En el modelo de vistas 4+1 de Kruchten, cada vista se centra en un aspecto estructural o de ejecución. Sin embargo, ninguna de ellas respondía al \emph{porqué} global.
+
+\begin{definicion}{Vista de la Decisión (\emph{Decision View})}
+La **Vista de la Decisión** es una vista arquitectónica transversal que documenta las razones, alternativas, compromisos y justificaciones que motivan los elementos presentes en todas las restantes vistas del sistema.
+\end{definicion}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  viewBox/.style={rectangle, draw=primary, fill=primary!15, thick, rounded corners=2mm, minimum width=2.6cm, minimum height=1cm, align=center},
+  decView/.style={rectangle, draw=accent, fill=accent!25, line width=1.5pt, rounded corners=3mm, minimum width=4cm, minimum height=2.8cm, align=center},
+  arrow/.style={-{Stealth[scale=1.1]}, line width=1.2pt, color=secondary}
+]
+  % Vistas 4+1
+  \node[viewBox] (log) at (-4, 2) {\textbf{Vista Lógica}\\[2pt]\scriptsize Clases / Paquetes};
+  \node[viewBox] (imp) at (4, 2) {\textbf{Vista Implement.}\\[2pt]\scriptsize Componentes / Libs};
+  \node[viewBox] (proc) at (-4, -2) {\textbf{Vista Procesos}\\[2pt]\scriptsize Hilos / Concurrencia};
+  \node[viewBox] (dep) at (4, -2) {\textbf{Vista Despliegue}\\[2pt]\scriptsize Servidores / Cloud};
+  \node[viewBox, fill=textdark!15] (uc) at (0, 3.2) {\textbf{Casos de Uso (+1)}};
+
+  % Decision View Transversal
+  \node[decView] (dec) at (0, 0) {\large\textbf{VISTA DE LA}\\ \large\textbf{DECISIÓN}\\ \footnotesize (ADD \& Rationale)\\[4pt]\scriptsize \textcolor{primary}{Transversal a todo el sistema}};
+
+  \draw[arrow] (dec) -- (log);
+  \draw[arrow] (dec) -- (imp);
+  \draw[arrow] (dec) -- (proc);
+  \draw[arrow] (dec) -- (dep);
+  \draw[arrow] (uc) -- (dec);
+\end{tikzpicture}
+\caption{La Vista de la Decisión como dimensión transversal que ilumina las vistas del modelo 4+1.}
+\label{fig:decision-view-transversal}
+\end{figure}
+
+\subsection{Procesos del Ciclo de Vida de AKM}
+
+La Gestión del Conocimiento Arquitectónico (\emph{Architecture Knowledge Management - AKM}) abarca cuatro grandes procesos interconectados:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  core/.style={circle, draw=primary, fill=primary!20, line width=1.5pt, minimum size=2.4cm, align=center},
+  proc/.style={rectangle, draw=secondary, fill=bglight, thick, rounded corners=2mm, minimum width=3.2cm, minimum height=1.1cm, align=center},
+  arrow/.style={-{Stealth[scale=1.1]}, line width=1.2pt}
+]
+  \node[core] (center) at (0, 0) {\textbf{Decisión de}\\ \textbf{Diseño (ADD)}};
+
+  \node[proc, fill=primary!10] (create) at (0, 2.8) {\textbf{Crear (\emph{Create})}\\[2pt]\scriptsize Make $\cdot$ Characterize $\cdot$ Store};
+  \node[proc, fill=secondary!10] (share) at (4.5, 0) {\textbf{Compartir (\emph{Share})}\\[2pt]\scriptsize Communicate $\cdot$ Review $\cdot$ Subscribe};
+  \node[proc, fill=accent!15] (assess) at (0, -2.8) {\textbf{Evaluar (\emph{Assess})}\\[2pt]\scriptsize Evaluate $\cdot$ Validate $\cdot$ Recommend};
+  \node[proc, fill=alertgreen!15] (learn) at (-4.5, 0) {\textbf{Aprender (\emph{Learn})}\\[2pt]\scriptsize Reuse $\cdot$ Teach $\cdot$ Detect Errors};
+
+  \draw[arrow, color=primary] (create) -- (center);
+  \draw[arrow, color=secondary] (center) -- (share);
+  \draw[arrow, color=accent] (center) -- (assess);
+  \draw[arrow, color=alertgreen] (learn) -- (center);
+
+  \draw[arrow, dashed, color=textdark] (share.south) |- (assess.east);
+  \draw[arrow, dashed, color=textdark] (assess.west) -| (learn.south);
+  \draw[arrow, dashed, color=textdark] (learn.north) |- (create.west);
+  \draw[arrow, dashed, color=textdark] (create.east) -| (share.north);
+\end{tikzpicture}
+\caption{Ciclo de vida integral de los procesos de Architecture Knowledge Management (AKM).}
+\label{fig:akm-ciclo}
+\end{figure}
+
+\subsection{Trazabilidad Externa: Forward y Backward Traceability}
+
+Las decisiones de diseño actúan como el nodo central que conecta los requisitos con los artefactos de software:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  req/.style={rectangle, draw=accent, fill=accent!20, thick, rounded corners=1.5mm, minimum width=2.8cm, minimum height=0.8cm, align=center},
+  dec/.style={rectangle, draw=secondary, fill=secondary!20, thick, rounded corners=1.5mm, minimum width=2.8cm, minimum height=0.8cm, align=center},
+  arch/.style={rectangle, draw=primary, fill=primary!20, thick, rounded corners=1.5mm, minimum width=2.8cm, minimum height=0.8cm, align=center},
+  arrow/.style={-{Stealth[scale=1.1]}, line width=1.2pt}
+]
+  % Nivel Requisitos
+  \node[req] (rf1) at (-4.5, 1.5) {\scriptsize RF-01: Pedidos Online};
+  \node[req] (rnf1) at (-4.5, 0) {\scriptsize RNF-01: Alta Disp. 99.99\%};
+  \node[req] (rnf2) at (-4.5, -1.5) {\scriptsize RNF-02: Latencia $<$ 50ms};
+
+  % Nivel Decisiones
+  \node[dec] (dd1) at (0, 1) {\textbf{DD-01: Estilo Microserv.}};
+  \node[dec] (dd2) at (0, -0.8) {\textbf{DD-02: Redis en Caché}};
+
+  % Nivel Arquitectura
+  \node[arch] (comp1) at (4.5, 1) {\scriptsize Componente: OrderAPI};
+  \node[arch] (comp2) at (4.5, -0.8) {\scriptsize Componente: RedisCluster};
+
+  \draw[arrow, color=secondary] (rf1) -- (dd1);
+  \draw[arrow, color=secondary] (rnf1) -- (dd1);
+  \draw[arrow, color=secondary] (rnf2) -- (dd2);
+  \draw[arrow, color=primary] (dd1) -- (comp1);
+  \draw[arrow, color=primary] (dd2) -- (comp2);
+
+  \node[above] at (0, 2.3) {\textcolor{secondary}{\textbf{Trazabilidad Hacia Delante (\emph{Forward Traceability}) $\longrightarrow$}}};
+  \node[below] at (0, -2.3) {\textcolor{accent}{\textbf{$\longleftarrow$ Trazabilidad Hacia Atrás (\emph{Backward Traceability})}}};
+\end{tikzpicture}
+\caption{Trazabilidad Externa: Análisis de impacto hacia delante y verificación hacia atrás.}
+\label{fig:trazabilidad-externa}
+\end{figure}
+
+\begin{definicion}{Modalidades de Trazabilidad Externa}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Trazabilidad Hacia Delante (\emph{Forward Traceability}):} Del Requisito $\to$ a la Decisión $\to$ a la Arquitectura. Se utiliza para el \textbf{análisis de impacto}: si el cliente cambia o añade un requisito, el arquitecto identifica inmediatamente qué decisiones quedan invalidadas y qué componentes específicos deben refactorizarse.
+  \item \textbf{Trazabilidad Hacia Atrás (\emph{Backward Traceability}):} De la Arquitectura $\to$ a la Decisión $\to$ al Requisito. Se utiliza para \textbf{auditoría y justificación}: permite descubrir el origen legítimo de cualquier componente en el sistema o detectar código huérfano / decisiones erróneas que no responden a ningún requisito real.
+\end{itemize}
+\end{definicion}
+
+\subsection{Trazabilidad Interna y Relaciones Ontológicas entre Decisiones}
+
+Las decisiones de diseño no son átomos aislados: interactúan entre sí formando un grafo de dependencias internas. En modelos ontológicos se definen cuatro relaciones cardinales:
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l p{3.5cm} X}
+\toprule
+\textbf{Relación Ontológica} & \textbf{Semántica Formal} & \textbf{Ejemplo Real en Arquitectura} \\
+\midrule
+\textbf{Relacionada con} & Asociación informativa general. & La decisión de autenticación JWT está relacionada con el Gateway. \\
+\addlinespace
+\textbf{Permite / Requiere} & $A$ habilita la adopción de $B$, o $B$ no puede existir sin $A$. & Adoptar \emph{Database-per-Service} requiere implementar el patrón \emph{SAGA}. \\
+\addlinespace
+\textbf{Excluye} & $A$ y $B$ son mutuamente excluyentes. & Elegir una arquitectura monolítica embebida de 2 capas \textbf{excluye} desplegar un clúster de microservicios con Kubernetes. \\
+\addlinespace
+\textbf{En Conflicto con} & $A$ y $B$ entran en fricción de atributos de calidad. & Requerir cifrado de extremo a extremo entra en conflicto con inspección de paquetes en el API Gateway. \\
+\bottomrule
+\end{tabularx}
+\caption{Tipología de relaciones en la trazabilidad interna entre decisiones.}
+\label{tab:relaciones-ontologicas}
+\end{table}
+
+\begin{antipatron}{Explosión Combinatoria por Granularidad Excesiva}
+Si el equipo intenta documentar decisiones a un nivel de granularidad microscópico (e.g., cada nombre de variable o cada bucle \texttt{for}), el grafo de dependencias se vuelve inabarcable e inútil. Como regla de oro, **las decisiones arquitectónicas deben acotarse al nivel de componentes, paquetes, estilos, tecnologías clave e interfaces principales**.
+\end{antipatron}
+
+% ==============================================================================
+% SECCIÓN 4: HERRAMIENTAS DE AKM
+% ==============================================================================
+\section{Herramientas de AKM y su Evolución Histórica}
+\label{sec:herramientas-akm}
+
+Desde 2004, la comunidad científica e industrial desarrolló herramientas para capturar, almacenar y razonar sobre el conocimiento arquitectónico:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  genBox/.style={rectangle, draw=primary, fill=bglight, thick, rounded corners=3mm, inner sep=8pt, align=center},
+  arrow/.style={-{Stealth[scale=1.2]}, line width=1.5pt, color=secondary}
+]
+  \node[genBox, text width=3.4cm, fill=primary!10] (g1) at (-4.2, 0) {
+    \textbf{1ª Generación}\\[2pt]
+    \scriptsize (2004--2006)\\[4pt]
+    \footnotesize \textbf{Captura Estática}\\[2pt]
+    \scriptsize RAT $\cdot$ Archium\\
+    \scriptsize PAKME $\cdot$ AREL
+  };
+
+  \node[genBox, text width=3.8cm, fill=secondary!10] (g2) at (0, 0) {
+    \textbf{2ª Generación}\\[2pt]
+    \scriptsize (2006--2011)\\[4pt]
+    \footnotesize \textbf{Soporte Web y Trazas}\\[2pt]
+    \scriptsize \textbf{ADDSS} (URJC)\\
+    \scriptsize EAGLE $\cdot$ AdWiki $\cdot$ SEURAT\\
+    \scriptsize Knowledge Architect (KA)
+  };
+
+  \node[genBox, text width=3.6cm, fill=accent!15] (g3) at (4.4, 0) {
+    \textbf{3ª Generación}\\[2pt]
+    \scriptsize (2012--Presente)\\[4pt]
+    \footnotesize \textbf{Colaboración y QOC}\\[2pt]
+    \scriptsize SAW $\cdot$ ADvISE\\
+    \scriptsize CoCoADvISE $\cdot$ ADMentor\\
+    \scriptsize \textbf{ADRs / MADR (Git)}
+  };
+
+  \draw[arrow] (g1.east) -- (g2.west);
+  \draw[arrow] (g2.east) -- (g3.west);
+\end{tikzpicture}
+\caption{Cronología evolutiva de las tres generaciones de herramientas de AKM.}
+\label{fig:herramientas-generaciones}
+\end{figure}
+
+\subsection{Herramientas Destacadas}
+
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{PAKME (2006):} Herramienta web basada en la plantilla de Tyree \& Akerman con soporte para atributos de calidad y patrones de diseño (Babar et al.).
+  \item \textbf{Archium:} Herramienta de modelado y extensión de lenguaje que emitía alertas cuando se introducían decisiones incompatibles.
+  \item \textbf{ADDSS (Architecture Design Decision Support System, 2006--2011):}\\
+  Desarrollada en la Universidad Rey Juan Carlos (Capilla et al.). Fue pionera en:
+    \begin{itemize}
+      \item Gestión web de decisiones asociadas a vistas arquitectónicas.
+      \item Enlaces bidireccionales de trazabilidad entre requisitos, decisiones y evolución de las arquitecturas a lo largo de sucesivas iteraciones.
+      \item Generación automática de documentación de arquitectura en PDF.
+    \end{itemize}
+  \item \textbf{SAW (Software Architecture Warehouse - Nowak, Pautasso):} Formato Wiki colaborativo para captura de decisiones en arquitecturas SOA/Cloud con búsqueda facetada por tags y modelos fuzzy de consenso.
+  \item \textbf{ADvISE y CoCoADvISE:} Utilizan el método **QOC (\emph{Question-Option-Criteria})** para representar el espacio del problema mediante preguntas, opciones de diseño evaluadas frente a criterios de calidad (RNF) y dependencias entre opciones.
+  \item \textbf{ADMentor (Olaf Zimmermann et al.):} Extensión sobre Enterprise Architect que asiste a los ingenieros en el modelado de decisiones para arquitecturas Cloud en colaboración con grandes corporaciones como ABB.
+\end{itemize}
+
+% ==============================================================================
+% SECCIÓN 5: EL FORMATO MADR
+% ==============================================================================
+\section{El Estándar Industrial MADR (Markdown Architectural Decision Records)}
+\label{sec:formato-madr}
+
+En el desarrollo de software moderno con metodologías ágiles y DevOps, la documentación pesada fuera de los repositorios tiende a desactualizarse rápidamente. La industria ha convergido de forma unánime hacia los **Architecture Decision Records (ADR)** versionados en Git junto al código, siendo el formato **MADR** (\emph{Markdown Architectural Decision Records}) el estándar más adoptado.
+
+\subsection{Estructura Oficial de una Plantilla MADR}
+
+\begin{lstlisting}[language=bash, caption={Estructura formal de una plantilla MADR v3.0}]
+# [Identificador y Titulo: Solucion y Problema resuelto]
+
+* Status: [proposed | rejected | accepted | deprecated | superseded by ADR-0005]
+* Date: [YYYY-MM-DD]
+* Deciders: [Lista de arquitectos / ingenieros participantes]
+
+## Context and Problem Statement
+[Descripcion concisa del contexto del sistema y el problema tecnico o funcional que exige tomar una decision]
+
+## Decision Drivers
+* [RF-01 o Atributo de Calidad: p. ej., Latencia < 50ms bajo 10.000 req/s]
+* [Coste de infraestructura mensual acotado a 500$]
+* [Cumplimiento estricto con la normativa de privacidad GDPR]
+
+## Considered Options
+* [Opcion 1: Nombre de la tecnologia, estilo o patron]
+* [Opcion 2: Alternativa tecnologica 2]
+* [Opcion 3: Alternativa tecnologica 3]
+
+## Decision Outcome
+Chosen option: "[Opcion 1]", because [justificacion concluyente que resuelve las fuerzas de los decision drivers y supera a las demas alternativas].
+
+### Positive Consequences
+* [Consecuencia positiva 1 en el contexto del proyecto]
+* [Consecuencia positiva 2]
+
+### Negative Consequences
+* [Compromiso / Desventaja asumida (Trade-off)]
+* [Riesgo tecnico o coste operativo derivado]
+
+## Pros and Cons of the Options
+
+### [Opcion 1]
+* Good, because [argumento positivo contextualizado]
+* Bad, because [argumento negativo contextualizado]
+
+### [Opcion 2]
+* Good, because [argumento positivo contextualizado]
+* Bad, because [argumento negativo contextualizado]
+\end{lstlisting}
+
+\subsection{Errores Clave a Evitar en MADR (Examen y Práctica Profesional)}
+
+En exámenes universitarios y revisiones de diseño en empresas, los ingenieros noveles suelen cometer errores graves al rellenar plantillas MADR:
+
+\begin{antipatron}{Errores Críticos en el Uso de MADR}
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Reutilizar requisitos funcionales como \emph{Decision Drivers} indiscriminadamente:} Los requisitos de dominio y negocio deben usarse con precisión; un requisito solo debe ser el motor de la decisión que directamente lo satisface.
+  \item \textbf{Proponer opciones consideradas absurdas o inconexas:} Si el problema es elegir un mecanismo de comunicación asíncrona entre microservicios, no tiene sentido poner como opciones: \emph{1. RabbitMQ, 2. Estilo por Capas, 3. Singleton}. Las alternativas deben pertenecer al mismo nivel de abstracción y espacio de la solución.
+  \item \textbf{Argumentos genéricos vacíos de contexto:}
+    \begin{itemize}
+      \item \textcolor{alertred}{\textbf{Inaceptable:}} \texttt{Good, because es escalable} (no dice nada).
+      \item \textcolor{alertgreen}{\textbf{Correcto:}} \texttt{Good, because permite escalar horizontalmente los consumidores del topic de pedidos de 2 a 16 réplicas en Kubernetes mediante KEDA durante el Black Friday sin pérdida de mensajes}.
+    \end{itemize}
+  \item \textbf{Omitir las consecuencias negativas:} Toda decisión arquitectónica implica compromisos (\emph{trade-offs}). Un ADR sin desventajas revela que el arquitecto no ha analizado los costes ocultos o la complejidad operativa de su elección.
+\end{enumerate}
+\end{antipatron}
+
+% ==============================================================================
+% SECCIÓN 6: REFLECTION Y EL MODELO MIND1/MIND2
+% ==============================================================================
+\section{Pensamiento Crítico y Reflexión en la Arquitectura: Modelo Mind 1 / Mind 2}
+\label{sec:reflection-mind}
+
+La toma de decisiones de diseño está frecuentemente contaminada por \textbf{sesgos cognitivos}:
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Sesgo de la Ley del Instrumento de Maslow:} \emph{<<Si tu única herramienta es un martillo, todos los problemas te parecerán clavos>>} (e.g., el desarrollador que insiste en usar siempre microservicios o el patrón Mediator para cualquier aplicación sencilla).
+  \item \textbf{Sesgo de Novedad (\emph{Hype-Driven Development}):} Elegir la última librería o tecnología de moda aparecida en Twitter/GitHub sin analizar si encaja con las restricciones reales del problema.
+\end{itemize}
+
+Para neutralizar estos sesgos, la disciplina incorpora el **pensamiento reflectivo y crítico** mediante el modelo **Mind 1 / Mind 2** (inspirado en la teoría de procesos duales del premio Nobel Daniel Kahneman):
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  m1/.style={rectangle, draw=primary, fill=primary!15, thick, rounded corners=2mm, minimum width=4cm, minimum height=0.9cm, align=center},
+  m2/.style={rectangle, draw=alertred, fill=alertred!15, thick, rounded corners=2mm, minimum width=4cm, minimum height=0.9cm, align=center},
+  arrow/.style={-{Stealth[scale=1.1]}, line width=1.2pt}
+]
+  % Columna Mind 1
+  \node at (-3, 3.2) {\large\textbf{\textcolor{primary}{Mind 1: Razonamiento}}};
+  \node[m1] (m1_1) at (-3, 2.2) {\scriptsize 1. Identificar Contexto y Req.};
+  \node[m1] (m1_2) at (-3, 0.8) {\scriptsize 2. Estructurar Problema};
+  \node[m1] (m1_3) at (-3, -0.6) {\scriptsize 3. Plantear Alternativas};
+  \node[m1] (m1_4) at (-3, -2) {\scriptsize 4. Seleccionar Solución};
+
+  \draw[arrow, color=primary] (m1_1) -- (m1_2);
+  \draw[arrow, color=primary] (m1_2) -- (m1_3);
+  \draw[arrow, color=primary] (m1_3) -- (m1_4);
+
+  % Columna Mind 2
+  \node at (3, 3.2) {\large\textbf{\textcolor{alertred}{Mind 2: Desafío Crítico}}};
+  \node[m2] (m2_1) at (3, 2.2) {\scriptsize ¿Contexto completo y preciso?};
+  \node[m2] (m2_2) at (3, 0.8) {\scriptsize ¿Problema bien articulado?};
+  \node[m2] (m2_3) at (3, -0.6) {\scriptsize ¿Alternativas viables y reales?};
+  \node[m2] (m2_4) at (3, -2) {\scriptsize ¿Pros/cons y riesgos evaluados?};
+
+  % Desafíos horizontales
+  \draw[{Stealth}-{Stealth}, thick, color=secondary] (m1_1) -- node[above] {\scriptsize Desafía} (m2_1);
+  \draw[{Stealth}-{Stealth}, thick, color=secondary] (m1_2) -- node[above] {\scriptsize Desafía} (m2_2);
+  \draw[{Stealth}-{Stealth}, thick, color=secondary] (m1_3) -- node[above] {\scriptsize Desafía} (m2_3);
+  \draw[{Stealth}-{Stealth}, thick, color=secondary] (m1_4) -- node[above] {\scriptsize Desafía} (m2_4);
+\end{tikzpicture}
+\caption{El modelo de pensamiento crítico Mind 1 / Mind 2 en el diseño arquitectónico.}
+\label{fig:mind1-mind2}
+\end{figure}
+
+\begin{definicion}{Roles en el Modelo Mind 1 / Mind 2}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Mind 1 (Design Reasoning - El Creador):} Es el ingeniero o equipo que formula el problema, analiza los requisitos, genera alternativas y propone una solución técnica lógica.
+  \item \textbf{Mind 2 (Reflective Thinking - El Abogado del Diablo):} Es el revisor o arquitecto crítico que pone en duda metódica cada asunción de Mind 1:
+    \begin{itemize}
+      \item \emph{¿Se están resolviendo los requisitos correctos?}
+      \item \emph{¿Se descartaron alternativas viables por sesgo personal?}
+      \item \emph{¿Qué pasará si el tráfico se multiplica por 10 o la red se particiona?}
+    \end{itemize}
+\end{itemize}
+\end{definicion}
+
+La interacción dialéctica entre Mind 1 y Mind 2 eleva radicalmente la calidad técnica de las decisiones y previene desastres operativos antes de escribir la primera línea de código.
+
+% ==============================================================================
+% SECCIÓN 7: EJERCICIOS RESUELTOS Y CASOS PRÁCTICOS
+% ==============================================================================
+\section{Ejercicios Resueltos y Casos Prácticos de Examen}
+\label{sec:ejercicios-tema3}
+
+\begin{ejercicioresuelto}{Redacción Formal de un Registro MADR para Migración Monolito a Microservicios}
+\textbf{Enunciado:}\\
+Una empresa de distribución alimentaria cuenta con un monolito legado con 6 módulos (\emph{Clientes, Pedidos, Reparto y Rutas, Estadísticas, Incidencias y Pagos}) y dos bases de datos SQL sobrecargadas. Se planea exponer el sistema hacia aplicaciones móviles y colaboradores externos mediante APIs HTTP/REST seguras. Redacte el registro arquitectónico MADR formal que capture la decisión del componente de acceso unificado.
+
+\vspace{0.5em}
+\textbf{Solución Razonada:}
+
+\begin{lstlisting}[language=bash]
+# ADR-001: Implementacion de API Gateway para Acceso a Microservicios
+
+* Status: accepted
+* Date: 2026-11-09
+* Deciders: Arquitecto Jefe, Equipo de Plataforma
+
+## Context and Problem Statement
+El sistema monolítico actual expone directamente puertos de base de datos a clientes web y de escritorio internos. Con la migración a microservicios y la entrada de apps móviles, se requiere un punto de entrada único que aísle a los clientes de la topología interna de red y centralice la autenticación, limitación de tasa y enrutamiento.
+
+## Decision Drivers
+* RNF-Seguridad: Centralizar la validación de tokens OAuth2/JWT antes de entrar a la red interna.
+* RNF-Rendimiento: Enrutamiento inverso con latencia añadida inferior a 5 ms.
+* RNF-Mantenibilidad: Evitar que los clientes móviles conozcan las IPs de los 6 microservicios.
+
+## Considered Options
+* 0001-Kong API Gateway (Basado en NGINX/OpenResty)
+* 0002-Spring Cloud Gateway (Basado en Netty reactivo)
+* 0003-Llamadas directas cliente-microservicio (Sin Gateway)
+
+## Decision Outcome
+Chosen option: "Kong API Gateway", because ofrece rendimiento óptimo en C/Lua, plugins estándar listos para producción (Rate Limiting, JWT, CORS) y soporte nativo para despliegues en Kubernetes.
+
+### Positive Consequences
+* Punto de control perimetral único para auditoría y seguridad.
+* Los microservicios internos no tienen que reimplementar validación de tokens ni políticas CORS.
+
+### Negative Consequences
+* Introduce un componente intermedio que debe desplegarse en alta disponibilidad para evitar ser un punto único de fallo (SPOF).
+
+## Pros and Cons of the Options
+
+### Kong API Gateway
+* Good, because latencia ultrabaja (<2ms) y bajo consumo de memoria.
+* Good, because soporte para plugins de seguridad y observabilidad Prometheus.
+* Bad, because la configuración avanzada de plugins personalizados exige conocimientos de Lua.
+
+### Spring Cloud Gateway
+* Good, because integración directa con el stack Java de la empresa.
+* Bad, because mayor consumo de memoria JVM y rendimiento inferior bajo picos de 50.000 peticiones/s.
+
+### Llamadas directas (Sin Gateway)
+* Bad, because acopla a las aplicaciones cliente a la red interna y multiplica el riesgo de vulnerabilidades de seguridad en cada microservicio.
+\end{lstlisting}
+\end{ejercicioresuelto}
+
+\begin{ejercicioresuelto}{Análisis de Impacto mediante Trazabilidad Bidireccional}
+\textbf{Enunciado:}\\
+Durante el despliegue del sistema alimentario, el departamento legal informa de que, debido a la normativa de protección de datos, ningún dato bancario de clientes puede residir en servidores situados fuera de la Unión Europea.
+\begin{enumerate}
+  \item Utilice la trazabilidad hacia delante (\emph{Forward Traceability}) para determinar qué decisiones y componentes se ven impactados.
+  \item Indique qué relación ontológica surge entre la decisión de almacenamiento bancario y la decisión de infraestructura en la nube.
+\end{enumerate}
+
+\vspace{0.5em}
+\textbf{Solución Razonada:}
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Análisis Forward:}
+  $$\text{Requisito Legal GDPR} \longrightarrow \text{ADD-004 (Almacén de Pagos)} \longrightarrow \text{Microservicio de Pagos y DB PostgreSQL}$$
+  El análisis identifica que la decisión \texttt{ADD-004} queda invalidada si apuntaba a una región \texttt{us-east-1} de AWS. El componente \texttt{PaymentService} y su base de datos son los únicos que deben reubicarse en la región \texttt{eu-central-1} (Frankfurt) sin necesidad de modificar los otros 5 microservicios (Rutas, Estadísticas, etc.), minimizando el coste de refactorización.
+  \item \textbf{Relación Ontológica:} La decisión de cumplimiento legal \textbf{excluye} la opción de utilizar proveedores de nube con almacenamiento exclusivo fuera de la UE y \textbf{requiere} el cifrado en reposo con claves gestionadas localmente (KMS europeo).
+\end{enumerate}
+\end{ejercicioresuelto}
+
+% ==============================================================================
+% SECCIÓN 8: RESUMEN EJECUTIVO Y PREGUNTAS DE AUTOEVALUACIÓN
+% ==============================================================================
+\section{Resumen Ejecutivo y Preguntas de Autoevaluación}
+\label{sec:resumen-tema3}
+
+\begin{tcolorbox}[
+  enhanced,
+  colback=secondary!5!bglight,
+  colframe=secondary,
+  arc=3mm,
+  boxrule=1pt,
+  title={\bfseries\color{white} Resumen de Conceptos Clave del Tema 3},
+  coltitle=white
+]
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Arquitectura = Decisiones (Jan Bosch):} La arquitectura es el resultado acumulado de decisiones de diseño justificadas; los componentes y conectores son la consecuencia de dichas decisiones.
+  \item \textbf{Evaporación del Conocimiento:} Si el conocimiento tácito no se explicita, se pierde al rotar el equipo, provocando erosión arquitectónica.
+  \item \textbf{ISO/IEC/IEEE 42010:2022:} Reconoce formalmente las decisiones y su justificación (\emph{rationale}) como elementos arquitectónicos de primer orden.
+  \item \textbf{Vista de la Decisión:} Dimensión transversal a las 4+1 vistas tradicionales y a los requisitos.
+  \item \textbf{Trazabilidad Bidireccional:} \emph{Forward} (del requisito a la arquitectura para análisis de impacto) y \emph{Backward} (de la arquitectura al requisito para auditoría y depuración de causas).
+  \item \textbf{MADR en Git:} Estándar ligero y versionable para documentar decisiones en Markdown. Exige alternativas viables, justificación con \emph{because} y consecuencias contextualizadas.
+  \item \textbf{Modelo Mind 1 / Mind 2:} Diálogo crítico entre el razonamiento creador (Mind 1) y el pensamiento reflexivo desafiante (Mind 2) para erradicar sesgos cognitivos.
+\end{itemize}
+\end{tcolorbox}
+
+\subsection{Batería de Preguntas de Autoevaluación}
+
+\begin{enumerate}[leftmargin=1.8em]
+  \item \textbf{¿Por qué afirma Jan Bosch que documentar únicamente componentes y conectores es insuficiente para describir una arquitectura software?} \\
+  \emph{Respuesta orientativa:} Porque los diagramas solo muestran el estado final de la estructura, pero ocultan los motivos subyacentes, los atributos de calidad que la motivaron y las alternativas tecnológicas descartadas. Sin este conocimiento, los futuros mantenedores violarán las asunciones de diseño originales.
+
+  \item \textbf{¿Cuál es la diferencia entre trazabilidad forward y backward en el marco de las ADDs?} \\
+  \emph{Respuesta orientativa:} La trazabilidad forward viaja del requisito hacia la decisión y la arquitectura para estimar el impacto de un cambio en los requisitos. La trazabilidad backward viaja de la arquitectura hacia la decisión y el requisito para justificar la existencia de un componente o rastrear el origen de una decisión errónea.
+
+  \item \textbf{¿Qué peligro entraña una red de trazabilidad interna con granularidad demasiado fina?} \\
+  \emph{Respuesta orientativa:} Produce una explosión combinatoria de dependencias que eleva desproporcionadamente la complejidad del mantenimiento de la documentación, provocando que los ingenieros abandonen la captura de conocimiento.
+
+  \item \textbf{En el formato MADR, ¿por qué es inaceptable justificar una alternativa con la frase ``Good, because es escalable''?} \\
+  \emph{Respuesta orientativa:} Porque es un argumento abstracto y genérico desprovisto del contexto del problema. La justificación debe explicar de qué forma precisa y bajo qué métricas la alternativa satisface las restricciones y requisitos específicos del sistema.
+
+  \item \textbf{¿Cómo opera el modelo Mind 1 / Mind 2 para prevenir el sesgo del instrumento de Maslow en la elección de patrones de diseño?} \\
+  \emph{Respuesta orientativa:} Mind 1 propone la solución guiado por la intuición y la experiencia previa, mientras que Mind 2 actúa como evaluador crítico que pone en duda si la solución elegida responde a una necesidad real del problema o si simplemente se propuso por afinidad personal del desarrollador.
+\end{enumerate}
